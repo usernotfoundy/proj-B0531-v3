@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { PLANETS } from '../config/planets.config'
-import { TOTAL_SCROLL_VH } from '../components/ScrollContainer'
+// import { TOTAL_SCROLL_VH } from '../components/ScrollContainer'
 
 export interface HUDState {
     activePlanetIndex: number

@@ -4,7 +4,7 @@ import { useHUD } from '../hooks/useHUD'
 
 export default function PlanetPanel() {
     const { activePlanetIndex, planetProgress } = useHUD()
-    const planet = PLANETS[activePlanetIndex]
+    // const planet = PLANETS[activePlanetIndex]
 
     // Panel is visible when you're in the middle of a planet's scroll section
     // Fades in after 8% progress, fades out after 80%
