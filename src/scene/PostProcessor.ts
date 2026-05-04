@@ -29,7 +29,7 @@ export class PostProcessor {
 
         this.bloomPass = new UnrealBloomPass(
             resolution,
-            0.5,    // strength  — intensity of the glow
+            0.2,    // strength  — intensity of the glow
             0.4,    // radius    — how far the glow spreads
             0.2,    // threshold — only pixels brighter than this bloom
         )

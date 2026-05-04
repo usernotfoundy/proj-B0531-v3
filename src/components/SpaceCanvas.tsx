@@ -1,11 +1,8 @@
-import { useRef } from 'react'
-import { useSpaceScene } from '../hooks/useSpaceScene'
+interface Props {
+    canvasRef: React.RefObject<HTMLCanvasElement | null>
+}
 
-export default function SpaceCanvas() {
-    const canvasRef = useRef<HTMLCanvasElement>(null)
-
-    useSpaceScene(canvasRef)
-
+export default function SpaceCanvas({ canvasRef }: Props) {
     return (
         <canvas
             ref={canvasRef}
