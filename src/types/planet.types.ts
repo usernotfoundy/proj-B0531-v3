@@ -4,6 +4,11 @@ export interface PlanetFact {
     unit?: string
 }
 
+export interface PlanetButton {
+    label: string
+    action?: string
+}
+
 export interface PlanetConfig {
     id: string
     name: string
@@ -14,6 +19,7 @@ export interface PlanetConfig {
     rotationSpeed?: number
     facts?: PlanetFact[]
     description?: string
+    button?: PlanetButton
 }
 
 export interface CameraWaypoint {

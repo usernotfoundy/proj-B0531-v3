@@ -198,6 +198,44 @@ export default function PlanetPanel() {
                         </div>
                     )}
 
+                    {/* ── Button ──────────────────────────────────────────── */}
+                    {PLANETS[renderedIndex].button && (
+                        <button
+                            onClick={() => console.log(`Action triggered for ${PLANETS[renderedIndex].name}`)}
+                            style={{
+                                width: '100%',
+                                padding: '0.6rem 0.8rem',
+                                marginBottom: '1rem',
+                                marginTop: '1rem',
+                                fontFamily: "'Orbitron', sans-serif",
+                                fontSize: '0.65rem',
+                                letterSpacing: '0.15em',
+                                fontWeight: 700,
+                                color: '#A7D8F5',
+                                backgroundColor: 'rgba(167,216,245,0.05)',
+                                border: '1px solid rgba(167,216,245,0.3)',
+                                borderRadius: '1px',
+                                cursor: 'pointer',
+                                textTransform: 'uppercase',
+                                transition: 'all 0.3s ease',
+                                boxShadow: '0 0 12px rgba(167,216,245,0)',
+                                pointerEvents: 'auto',
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = 'rgba(167,216,245,0.12)';
+                                e.currentTarget.style.boxShadow = '0 0 12px rgba(167,216,245,0.3)';
+                                e.currentTarget.style.color = '#F4FAFF';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'rgba(167,216,245,0.05)';
+                                e.currentTarget.style.boxShadow = '0 0 12px rgba(167,216,245,0)';
+                                e.currentTarget.style.color = '#A7D8F5';
+                            }}
+                        >
+                            {PLANETS[renderedIndex].button.label}
+                        </button>
+                    )}
+
                     {/* ── Footer tag ──────────────────────────────────────── */}
                     <div style={{
                         marginTop: '1rem',
