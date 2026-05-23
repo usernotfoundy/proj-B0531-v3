@@ -3,7 +3,7 @@ import type { PlanetConfig } from '../types/planet.types'
 export const PLANETS: PlanetConfig[] = [
     {
         id: 'earth',
-        name: 'Earth',
+        name: 'GODPARENTS',
         modelPath: '/models/earth.glb',
         position: [0, 0, 0],
         displaySize: 10,
@@ -21,12 +21,12 @@ export const PLANETS: PlanetConfig[] = [
     },
     {
         id: 'mars',
-        name: 'Mars',
+        name: 'Mission Briefing',
         modelPath: '/models/mars.glb',
         position: [20, -8, -120],
         displaySize: 10,
         rotationSpeed: 0.0015,
-        description: 'Mission Briefing',
+        description: 'Launch Parameters',
         facts: [
             { label: 'Stardate', value: 'August 1st, 2026', unit: 'Saturday' },
             { label: 'T-Minus Zero', value: '11:00 AM', unit: 'AST (Arrival Standard Time)' },
