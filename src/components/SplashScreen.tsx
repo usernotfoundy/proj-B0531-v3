@@ -95,7 +95,7 @@ export default function SplashScreen({ spaceshipRef, onDismiss }: Props) {
                         color: 'rgba(137,194,217,0.6)',
                         textTransform: 'uppercase',
                     }}>
-                        An Interactive Journey
+                        You Are Invited
                     </span>
                     <div style={{
                         width: '2rem',
@@ -106,29 +106,33 @@ export default function SplashScreen({ spaceshipRef, onDismiss }: Props) {
 
                 {/* Title */}
                 <h1 style={{
-                    fontSize: 'clamp(2.5rem, 6vw, 5rem)',
+                    fontSize: 'clamp(1.8rem, 5vw, 3.5rem)',
                     fontWeight: 900,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
                     color: '#F4FAFF',
                     textShadow: '0 0 60px rgba(167,216,245,0.35), 0 0 120px rgba(137,194,217,0.15)',
-                    lineHeight: 1,
+                    lineHeight: 1.2,
                     textAlign: 'center',
+                    textTransform: 'none',
                 }}>
-                    Solar
+                    One Small Step for a
                     <br />
-                    <span style={{ color: '#A7D8F5' }}>Explorer</span>
+                    <span style={{ color: '#A7D8F5' }}>One-Year-Old</span>
                 </h1>
 
                 {/* Subtitle */}
                 <p style={{
-                    fontSize: '0.6rem',
-                    letterSpacing: '0.2em',
-                    color: 'rgba(205,239,253,0.4)',
-                    textTransform: 'uppercase',
+                    fontSize: '0.65rem',
+                    letterSpacing: '0.08em',
+                    color: 'rgba(205,239,253,0.6)',
                     textAlign: 'center',
+                    lineHeight: 1.6,
+                    maxWidth: '90vw',
+                    textTransform: 'none',
                 }}>
-                    Navigate the solar system
+                    Join us as we celebrate Emz's first trip around the sun
+                    <br />
+                    and his celestial blessing
                 </p>
 
             </div>
@@ -179,7 +183,7 @@ export default function SplashScreen({ spaceshipRef, onDismiss }: Props) {
                         e.currentTarget.style.borderColor = 'rgba(167,216,245,0.35)'
                     }}
                 >
-                    Begin Journey
+                    Begin Celebration
                 </button>
 
                 {/* Corner accents on button area */}
@@ -189,7 +193,7 @@ export default function SplashScreen({ spaceshipRef, onDismiss }: Props) {
                     color: 'rgba(137,194,217,0.3)',
                     textTransform: 'uppercase',
                 }}>
-                    Scroll to explore
+                    Explore the celestial journey
                 </div>
 
             </div>
