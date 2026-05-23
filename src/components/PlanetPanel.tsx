@@ -183,14 +183,14 @@ export default function PlanetPanel() {
                                     }}>
                                         {fact.value}
                                         {fact.unit && (
-                                            <span style={{
+                                            <div style={{
                                                 fontSize: '0.55rem',
                                                 fontWeight: 400,
                                                 color: 'rgba(167,216,245,0.5)',
-                                                marginLeft: '0.2rem',
+                                                marginTop: '0.15rem',
                                             }}>
                                                 {fact.unit}
-                                            </span>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
