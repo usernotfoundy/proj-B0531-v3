@@ -1,9 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { PLANETS } from '../config/planets.config'
 import { useHUD } from '../hooks/useHUD'
-import CoordinatesModal from './CoordinatesModal'
 
-export default function PlanetPanel() {
+interface CoordinatesData {
+  latitude: number
+  longitude: number
+  planetName: string
+  description?: string
+}
+
+interface PlanetPanelProps {
+  onShowCoordinates?: (data: CoordinatesData) => void
+}
+
+export default function PlanetPanel({ onShowCoordinates }: PlanetPanelProps) {
     const { activePlanetIndex, planetProgress } = useHUD()
     // const planet = PLANETS[activePlanetIndex]
 
@@ -13,7 +23,6 @@ export default function PlanetPanel() {
 
     const [renderedIndex, setRenderedIndex] = useState(activePlanetIndex)
     const [animState, setAnimState] = useState<'in' | 'out' | 'idle'>('idle')
-    const [showCoordinatesModal, setShowCoordinatesModal] = useState(false)
     const prevIndexRef = useRef(activePlanetIndex)
 
     useEffect(() => {
@@ -204,8 +213,13 @@ export default function PlanetPanel() {
                     {PLANETS[renderedIndex].button && (
                         <button
                             onClick={() => {
-                                if (PLANETS[renderedIndex].coordinates) {
-                                    setShowCoordinatesModal(true)
+                                if (PLANETS[renderedIndex].coordinates && onShowCoordinates) {
+                                    onShowCoordinates({
+                                        latitude: PLANETS[renderedIndex].coordinates!.latitude,
+                                        longitude: PLANETS[renderedIndex].coordinates!.longitude,
+                                        planetName: PLANETS[renderedIndex].name,
+                                        description: PLANETS[renderedIndex].coordinates?.description,
+                                    })
                                 }
                             }}
                             style={{
@@ -309,18 +323,6 @@ export default function PlanetPanel() {
                 borderTop: '1px solid rgba(167,216,245,0.4)',
                 pointerEvents: 'none',
             }} />
-
-            {/* ── Coordinates Modal ──────────────────────────────────── */}
-            {PLANETS[renderedIndex].coordinates && (
-                <CoordinatesModal
-                    isOpen={showCoordinatesModal}
-                    onClose={() => setShowCoordinatesModal(false)}
-                    planetName={PLANETS[renderedIndex].name}
-                    latitude={PLANETS[renderedIndex].coordinates!.latitude}
-                    longitude={PLANETS[renderedIndex].coordinates!.longitude}
-                    description={PLANETS[renderedIndex].coordinates?.description}
-                />
-            )}
         </div>
     )
 }

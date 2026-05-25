@@ -21,6 +21,17 @@ export default function CoordinatesModal({
 }: CoordinatesModalProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null)
     const mapRef = useRef<L.Map | null>(null)
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+
+    // Handle window resize for responsive design
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768)
+        }
+
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
 
     useEffect(() => {
         if (isOpen && mapContainerRef.current && !mapRef.current) {
@@ -90,10 +101,9 @@ export default function CoordinatesModal({
                     backdropFilter: 'blur(12px)',
                     WebkitBackdropFilter: 'blur(12px)',
                     boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(167,216,245,0.15)',
-                    width: '90vw',
-                    maxWidth: '800px',
-                    height: '90vh',
-                    maxHeight: '600px',
+                    width: '85vw',
+                    maxWidth: '1400px',
+                    height: '75vh',
                     display: 'flex',
                     flexDirection: 'column',
                     overflow: 'hidden',
