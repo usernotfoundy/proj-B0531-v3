@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -60,7 +60,6 @@ const USER_ICON = makeSvgIcon(
     [28, 28], [14, 14],
 )
 
-// Re-fetch route only after moving this many metres
 const ROUTE_REFETCH_THRESHOLD_M = 50
 
 type GeoState = 'idle' | 'loading' | 'success' | 'error'
@@ -81,14 +80,8 @@ export default function CoordinatesModal({
     const userMarkerRef = useRef<L.Marker | null>(null)
     const routeHaloRef = useRef<L.GeoJSON | null>(null)
     const routeLineRef = useRef<L.GeoJSON | null>(null)
-
-    // watchPosition ID — needed to cancel on close
     const watchIdRef = useRef<number | null>(null)
-
-    // Last position where we successfully fetched a route (to throttle re-fetches)
     const lastRouteFetchRef = useRef<{ lat: number; lng: number } | null>(null)
-
-    // Whether the map has been auto-fitted at least once (avoid fighting the user after first fit)
     const hasFittedRef = useRef(false)
 
     const [geoState, setGeoState] = useState<GeoState>('idle')
@@ -100,7 +93,7 @@ export default function CoordinatesModal({
     const [routeDistance, setRouteDistance] = useState<string | null>(null)
     const [routeDuration, setRouteDuration] = useState<string | null>(null)
 
-    // ── Map init ─────────────────────────────────────────────────────────────
+    // ── 1. Map init ───────────────────────────────────────────────────────────
     useEffect(() => {
         if (isOpen && mapContainerRef.current && !mapRef.current) {
             const map = L.map(mapContainerRef.current).setView([latitude, longitude], 13)
@@ -135,8 +128,8 @@ export default function CoordinatesModal({
         }
     }, [isOpen, latitude, longitude, planetName, description])
 
-    // ── Route fetcher ─────────────────────────────────────────────────────────
-    const fetchRoute = async (uLat: number, uLng: number) => {
+    // ── 2. Route fetcher (stable ref via useCallback) ─────────────────────────
+    const fetchRoute = useCallback(async (uLat: number, uLng: number) => {
         const map = mapRef.current
         if (!map) return
 
@@ -158,7 +151,6 @@ export default function CoordinatesModal({
             setRouteState('success')
             lastRouteFetchRef.current = { lat: uLat, lng: uLng }
 
-            // Remove old layers
             routeHaloRef.current?.remove()
             routeLineRef.current?.remove()
 
@@ -170,16 +162,12 @@ export default function CoordinatesModal({
                 style: { color: '#4ade80', weight: 4, opacity: 0.85 },
             }).addTo(map)
 
-            // Auto-fit only on first route draw
             if (!hasFittedRef.current) {
                 map.fitBounds(routeLineRef.current.getBounds(), { padding: [48, 48] })
                 hasFittedRef.current = true
             }
-
         } catch {
             setRouteState('error')
-
-            // Straight-line fallback
             routeHaloRef.current?.remove()
             routeLineRef.current?.remove()
             routeLineRef.current = L.geoJSON(
@@ -190,9 +178,10 @@ export default function CoordinatesModal({
                 { style: { color: '#4ade80', weight: 1.5, opacity: 0.5, dashArray: '6 6' } }
             ).addTo(map)
         }
-    }
+    }, [latitude, longitude])
 
-    // ── watchPosition — live tracking ─────────────────────────────────────────
+    // ── 3. watchPosition — only updates state, nothing else ───────────────────
+    //    Decoupled from map so there's no race condition on mobile.
     useEffect(() => {
         if (!isOpen) return
 
@@ -205,52 +194,21 @@ export default function CoordinatesModal({
         setGeoState('loading')
         setGeoError(null)
 
-        const handlePosition = (pos: GeolocationPosition) => {
-            const { latitude: uLat, longitude: uLng } = pos.coords
-
-            setUserCoords({ lat: uLat, lng: uLng })
-            setGeoState('success')
-            setStraightDist(formatDistance(haversineDistance(uLat, uLng, latitude, longitude)))
-
-            const map = mapRef.current
-            if (!map) return
-
-            // Move or create user marker
-            if (userMarkerRef.current) {
-                userMarkerRef.current.setLatLng([uLat, uLng])
-            } else {
-                userMarkerRef.current = L.marker([uLat, uLng], { icon: USER_ICON })
-                    .addTo(map)
-                    .bindPopup(
-                        `<div style="text-align:center;font-weight:bold;color:#166534;">
-                            Your Location<br/>${uLat.toFixed(6)}, ${uLng.toFixed(6)}
-                        </div>`
-                    )
-            }
-
-            // Re-fetch route only if we've moved > threshold since last fetch
-            const last = lastRouteFetchRef.current
-            const movedEnough =
-                !last || haversineMeters(last.lat, last.lng, uLat, uLng) > ROUTE_REFETCH_THRESHOLD_M
-
-            if (movedEnough) {
-                fetchRoute(uLat, uLng)
-            }
-        }
-
-        const handleError = (err: GeolocationPositionError) => {
-            setGeoState('error')
-            setGeoError(
-                err.code === 1
-                    ? 'Location access denied. Enable permissions to see your position.'
-                    : 'Unable to retrieve your location.'
-            )
-        }
-
         watchIdRef.current = navigator.geolocation.watchPosition(
-            handlePosition,
-            handleError,
-            { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+            (pos) => {
+                setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+                setGeoState('success')
+            },
+            (err) => {
+                setGeoState('error')
+                setGeoError(
+                    err.code === 1
+                        ? 'Location access denied. Enable permissions to see your position.'
+                        : 'Unable to retrieve your location.'
+                )
+            },
+            // maximumAge:0 forces a fresh fix on mobile — no stale cached position
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
         )
 
         return () => {
@@ -259,9 +217,41 @@ export default function CoordinatesModal({
                 watchIdRef.current = null
             }
         }
-    }, [isOpen, latitude, longitude])
+    }, [isOpen])
 
-    // ── Reset on close ────────────────────────────────────────────────────────
+    // ── 4. React to userCoords changes — map is guaranteed ready here ─────────
+    useEffect(() => {
+        if (!userCoords) return
+
+        const { lat: uLat, lng: uLng } = userCoords
+        setStraightDist(formatDistance(haversineDistance(uLat, uLng, latitude, longitude)))
+
+        const map = mapRef.current
+        if (!map) return
+
+        // Move or place user marker
+        if (userMarkerRef.current) {
+            userMarkerRef.current.setLatLng([uLat, uLng])
+        } else {
+            userMarkerRef.current = L.marker([uLat, uLng], { icon: USER_ICON })
+                .addTo(map)
+                .bindPopup(
+                    `<div style="text-align:center;font-weight:bold;color:#166534;">
+                        Your Location<br/>${uLat.toFixed(6)}, ${uLng.toFixed(6)}
+                    </div>`
+                )
+        }
+
+        // Re-fetch route only if moved past threshold
+        const last = lastRouteFetchRef.current
+        const movedEnough =
+            !last || haversineMeters(last.lat, last.lng, uLat, uLng) > ROUTE_REFETCH_THRESHOLD_M
+
+        if (movedEnough) fetchRoute(uLat, uLng)
+
+    }, [userCoords, latitude, longitude, fetchRoute])
+
+    // ── 5. Reset on close ─────────────────────────────────────────────────────
     useEffect(() => {
         if (!isOpen) {
             setGeoState('idle')
@@ -285,88 +275,91 @@ export default function CoordinatesModal({
             onClick={onClose}
         >
             <div
-                style={{ background: 'linear-gradient(135deg, rgba(167,216,245,0.1) 0%, rgba(137,194,217,0.05) 100%)', border: '1px solid rgba(167,216,245,0.25)', borderRadius: '4px', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(167,216,245,0.15)', width: '85vw', maxWidth: '1400px', height: '75vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', pointerEvents: 'auto' }}
+                style={{ background: 'linear-gradient(135deg, rgba(167,216,245,0.1) 0%, rgba(137,194,217,0.05) 100%)', border: '1px solid rgba(167,216,245,0.25)', borderRadius: '4px', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(167,216,245,0.15)', width: '92vw', maxWidth: '1400px', height: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', pointerEvents: 'auto' }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Top accent */}
                 <div style={{ height: '2px', background: 'linear-gradient(to right, #A7D8F5, #89C2D9, transparent)' }} />
 
                 {/* ── Header ────────────────────────────────────────────── */}
-                <div style={{ padding: '1.5rem 1.75rem', borderBottom: '1px solid rgba(167,216,245,0.12)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', background: 'linear-gradient(to bottom, rgba(167,216,245,0.08), rgba(137,194,217,0.02))' }}>
-                    <div>
-                        <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: '1.1rem', fontWeight: 900, letterSpacing: '0.1em', color: '#F4FAFF', textTransform: 'uppercase', margin: 0, marginBottom: '0.3rem', textShadow: '0 0 20px rgba(167,216,245,0.25)' }}>
+                <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(167,216,245,0.12)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', background: 'linear-gradient(to bottom, rgba(167,216,245,0.08), rgba(137,194,217,0.02))', flexWrap: 'wrap' }}>
+                    <div style={{ minWidth: 0 }}>
+                        <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 'clamp(0.8rem, 2.5vw, 1.1rem)', fontWeight: 900, letterSpacing: '0.1em', color: '#F4FAFF', textTransform: 'uppercase', margin: 0, marginBottom: '0.25rem', textShadow: '0 0 20px rgba(167,216,245,0.25)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {planetName}
                         </h3>
-                        <p style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.75rem', color: 'rgba(205,239,253,0.7)', margin: 0, letterSpacing: '0.05em' }}>
+                        <p style={{ fontFamily: "'Syne', sans-serif", fontSize: 'clamp(0.65rem, 1.8vw, 0.75rem)', color: 'rgba(205,239,253,0.7)', margin: 0, letterSpacing: '0.05em' }}>
                             {description}
                         </p>
                     </div>
 
-                    {/* Live tracking badge */}
-                    {geoState === 'success' && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 6px #4ade80', animation: 'pulse 2s infinite' }} />
-                            <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.68rem', color: '#4ade80', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                                Live
-                            </span>
-                        </div>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
+                        {/* Live badge */}
+                        {geoState === 'success' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 6px #4ade80', animation: 'pulse 2s infinite' }} />
+                                <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.68rem', color: '#4ade80', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Live</span>
+                            </div>
+                        )}
 
-                    <div style={{ flex: 1, textAlign: 'center' }}>
+                        {/* Status messages */}
                         {geoState === 'loading' && (
                             <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.7rem', color: '#A7D8F5', letterSpacing: '0.08em', opacity: 0.8 }}>⟳ Locating…</span>
                         )}
                         {geoState === 'success' && routeState === 'loading' && (
-                            <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.7rem', color: '#A7D8F5', letterSpacing: '0.08em', opacity: 0.8 }}>⟳ Calculating route…</span>
+                            <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.7rem', color: '#A7D8F5', letterSpacing: '0.08em', opacity: 0.8 }}>⟳ Routing…</span>
                         )}
                         {geoState === 'error' && (
-                            <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.7rem', color: '#fca5a5', letterSpacing: '0.05em' }}>⚠ {geoError}</span>
+                            <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.65rem', color: '#fca5a5', letterSpacing: '0.03em', maxWidth: '160px', textAlign: 'right' }}>⚠ {geoError}</span>
                         )}
-                        {routeState === 'error' && (
-                            <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.7rem', color: '#fcd34d', letterSpacing: '0.05em' }}>⚠ Route unavailable — showing straight-line path</span>
+                        {routeState === 'error' && geoState !== 'error' && (
+                            <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.65rem', color: '#fcd34d', letterSpacing: '0.03em' }}>⚠ Straight-line only</span>
                         )}
-                    </div>
 
-                    <button
-                        onClick={onClose}
-                        style={{ background: 'rgba(167,216,245,0.08)', border: '1px solid rgba(167,216,245,0.25)', borderRadius: '2px', color: '#A7D8F5', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 'bold', transition: 'all 0.3s ease', flexShrink: 0 }}
-                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(167,216,245,0.15)'; e.currentTarget.style.color = '#F4FAFF' }}
-                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(167,216,245,0.08)'; e.currentTarget.style.color = '#A7D8F5' }}
-                    >
-                        ✕
-                    </button>
+                        {/* Close */}
+                        <button
+                            onClick={onClose}
+                            style={{ background: 'rgba(167,216,245,0.08)', border: '1px solid rgba(167,216,245,0.25)', borderRadius: '2px', color: '#A7D8F5', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold', transition: 'all 0.3s ease', flexShrink: 0 }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(167,216,245,0.15)'; e.currentTarget.style.color = '#F4FAFF' }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(167,216,245,0.08)'; e.currentTarget.style.color = '#A7D8F5' }}
+                        >
+                            ✕
+                        </button>
+                    </div>
                 </div>
 
                 {/* ── Map ───────────────────────────────────────────────── */}
-                <div ref={mapContainerRef} style={{ flex: 1, overflow: 'hidden', position: 'relative', borderBottom: '1px solid rgba(167,216,245,0.12)' }} />
+                <div ref={mapContainerRef} style={{ flex: 1, overflow: 'hidden', position: 'relative', borderBottom: '1px solid rgba(167,216,245,0.12)', minHeight: 0 }} />
 
                 {/* ── Footer ────────────────────────────────────────────── */}
-                <div style={{ padding: '1rem 1.75rem', background: 'linear-gradient(to top, rgba(137,194,217,0.05), rgba(167,216,245,0.03))', borderTop: '1px solid rgba(167,216,245,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ padding: '0.75rem 1.25rem', background: 'linear-gradient(to top, rgba(137,194,217,0.05), rgba(167,216,245,0.03))', borderTop: '1px solid rgba(167,216,245,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {/* Target */}
                     <div>
-                        <p style={{ fontFamily: "'Orbitron', sans-serif", fontSize: '0.65rem', letterSpacing: '0.15em', color: '#89C2D9', textTransform: 'uppercase', margin: 0, marginBottom: '0.4rem' }}>Target</p>
-                        <p style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.85rem', fontWeight: 700, color: '#F4FAFF', margin: 0 }}>
+                        <p style={{ fontFamily: "'Orbitron', sans-serif", fontSize: '0.6rem', letterSpacing: '0.12em', color: '#89C2D9', textTransform: 'uppercase', margin: 0, marginBottom: '0.3rem' }}>Target</p>
+                        <p style={{ fontFamily: "'Syne', sans-serif", fontSize: 'clamp(0.7rem, 2vw, 0.85rem)', fontWeight: 700, color: '#F4FAFF', margin: 0 }}>
                             {latitude.toFixed(6)} N, {longitude.toFixed(6)} E
                         </p>
                     </div>
 
+                    {/* Distance + duration */}
                     {geoState === 'success' && displayDistance && (
                         <div style={{ textAlign: 'center' }}>
-                            <p style={{ fontFamily: "'Orbitron', sans-serif", fontSize: '0.65rem', letterSpacing: '0.15em', color: '#4ade80', textTransform: 'uppercase', margin: 0, marginBottom: '0.4rem' }}>
+                            <p style={{ fontFamily: "'Orbitron', sans-serif", fontSize: '0.6rem', letterSpacing: '0.12em', color: '#4ade80', textTransform: 'uppercase', margin: 0, marginBottom: '0.3rem' }}>
                                 {routeState === 'success' ? 'By Road' : 'Straight Line'}
                             </p>
-                            <p style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.85rem', fontWeight: 700, color: '#F4FAFF', margin: 0 }}>
+                            <p style={{ fontFamily: "'Syne', sans-serif", fontSize: 'clamp(0.7rem, 2vw, 0.85rem)', fontWeight: 700, color: '#F4FAFF', margin: 0 }}>
                                 {displayDistance}
                                 {routeDuration && (
-                                    <span style={{ color: 'rgba(244,250,255,0.55)', fontWeight: 400, marginLeft: '0.5rem' }}>· {routeDuration}</span>
+                                    <span style={{ color: 'rgba(244,250,255,0.55)', fontWeight: 400, marginLeft: '0.4rem' }}>· {routeDuration}</span>
                                 )}
                             </p>
                         </div>
                     )}
 
+                    {/* Your position */}
                     {geoState === 'success' && userCoords ? (
                         <div style={{ textAlign: 'right' }}>
-                            <p style={{ fontFamily: "'Orbitron', sans-serif", fontSize: '0.65rem', letterSpacing: '0.15em', color: '#4ade80', textTransform: 'uppercase', margin: 0, marginBottom: '0.4rem' }}>Your Position</p>
-                            <p style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.85rem', fontWeight: 700, color: '#F4FAFF', margin: 0 }}>
+                            <p style={{ fontFamily: "'Orbitron', sans-serif", fontSize: '0.6rem', letterSpacing: '0.12em', color: '#4ade80', textTransform: 'uppercase', margin: 0, marginBottom: '0.3rem' }}>Your Position</p>
+                            <p style={{ fontFamily: "'Syne', sans-serif", fontSize: 'clamp(0.7rem, 2vw, 0.85rem)', fontWeight: 700, color: '#F4FAFF', margin: 0 }}>
                                 {userCoords.lat.toFixed(6)} N, {userCoords.lng.toFixed(6)} E
                             </p>
                         </div>
@@ -382,7 +375,6 @@ export default function CoordinatesModal({
                 {/* Bottom accent */}
                 <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(167,216,245,0.15))' }} />
 
-                {/* Pulse keyframe for live badge */}
                 <style>{`
                     @keyframes pulse {
                         0%, 100% { opacity: 1; transform: scale(1); }
