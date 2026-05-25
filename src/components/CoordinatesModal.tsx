@@ -11,7 +11,8 @@ interface CoordinatesModalProps {
     description?: string
 }
 
-// Haversine formula — returns distance in kilometers
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 6371
     const dLat = ((lat2 - lat1) * Math.PI) / 180
@@ -28,14 +29,15 @@ function formatDistance(km: number): string {
     return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`
 }
 
-// SVG icon factory using divIcon to avoid default Leaflet asset issues
+function formatDuration(seconds: number): string {
+    const h = Math.floor(seconds / 3600)
+    const m = Math.round((seconds % 3600) / 60)
+    if (h === 0) return `${m} min`
+    return `${h}h ${m}min`
+}
+
 function makeSvgIcon(svgContent: string, size: [number, number], anchor: [number, number]) {
-    return L.divIcon({
-        html: svgContent,
-        iconSize: size,
-        iconAnchor: anchor,
-        className: '',
-    })
+    return L.divIcon({ html: svgContent, iconSize: size, iconAnchor: anchor, className: '' })
 }
 
 const TARGET_ICON = makeSvgIcon(
@@ -43,8 +45,7 @@ const TARGET_ICON = makeSvgIcon(
         <path d="M12 0C5.37 0 0 5.37 0 12c0 7 12 26 12 26s12-19 12-26C24 5.37 18.63 0 12 0z" fill="#29657a"/>
         <circle cx="12" cy="12" r="5" fill="#A0DAF1"/>
     </svg>`,
-    [32, 40],
-    [16, 40],
+    [32, 40], [16, 40],
 )
 
 const USER_ICON = makeSvgIcon(
@@ -53,11 +54,15 @@ const USER_ICON = makeSvgIcon(
         <circle cx="14" cy="14" r="6" fill="#4ade80"/>
         <circle cx="14" cy="14" r="3" fill="#fff"/>
     </svg>`,
-    [28, 28],
-    [14, 14],
+    [28, 28], [14, 14],
 )
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
 type GeoState = 'idle' | 'loading' | 'success' | 'error'
+type RouteState = 'idle' | 'loading' | 'success' | 'error'
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function CoordinatesModal({
     isOpen,
@@ -70,14 +75,21 @@ export default function CoordinatesModal({
     const mapContainerRef = useRef<HTMLDivElement>(null)
     const mapRef = useRef<L.Map | null>(null)
     const userMarkerRef = useRef<L.Marker | null>(null)
-    const polylineRef = useRef<L.Polyline | null>(null)
+    const routeLayerRef = useRef<L.GeoJSON | null>(null)
 
     const [geoState, setGeoState] = useState<GeoState>('idle')
     const [geoError, setGeoError] = useState<string | null>(null)
     const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null)
-    const [distance, setDistance] = useState<string | null>(null)
 
-    // ── Map init ─────────────────────────────────────────────────────────────
+    // straight-line fallback distance (shown before route loads)
+    const [straightDist, setStraightDist] = useState<string | null>(null)
+
+    // OSRM route data
+    const [routeState, setRouteState] = useState<RouteState>('idle')
+    const [routeDistance, setRouteDistance] = useState<string | null>(null)
+    const [routeDuration, setRouteDuration] = useState<string | null>(null)
+
+    // ── Map init ────────────────────────────────────────────────────────────
     useEffect(() => {
         if (isOpen && mapContainerRef.current && !mapRef.current) {
             const map = L.map(mapContainerRef.current).setView([latitude, longitude], 13)
@@ -87,13 +99,14 @@ export default function CoordinatesModal({
                 maxZoom: 19,
             }).addTo(map)
 
-            const marker = L.marker([latitude, longitude], { icon: TARGET_ICON }).addTo(map)
-            marker.bindPopup(
-                `<div style="text-align:center;font-weight:bold;color:#29657a;">
-                    ${planetName}<br/>${description}<br/>
-                    ${latitude.toFixed(6)}, ${longitude.toFixed(6)}
-                </div>`
-            )
+            L.marker([latitude, longitude], { icon: TARGET_ICON })
+                .addTo(map)
+                .bindPopup(
+                    `<div style="text-align:center;font-weight:bold;color:#29657a;">
+                        ${planetName}<br/>${description}<br/>
+                        ${latitude.toFixed(6)}, ${longitude.toFixed(6)}
+                    </div>`
+                )
 
             mapRef.current = map
             setTimeout(() => map.invalidateSize(), 100)
@@ -104,12 +117,12 @@ export default function CoordinatesModal({
                 mapRef.current.remove()
                 mapRef.current = null
                 userMarkerRef.current = null
-                polylineRef.current = null
+                routeLayerRef.current = null
             }
         }
     }, [isOpen, latitude, longitude, planetName, description])
 
-    // ── Auto-locate on open ───────────────────────────────────────────────────
+    // ── Geolocation → then fetch route ─────────────────────────────────────
     useEffect(() => {
         if (!isOpen) return
 
@@ -123,16 +136,16 @@ export default function CoordinatesModal({
         setGeoError(null)
 
         navigator.geolocation.getCurrentPosition(
-            (pos) => {
+            async (pos) => {
                 const { latitude: uLat, longitude: uLng } = pos.coords
                 setUserCoords({ lat: uLat, lng: uLng })
                 setGeoState('success')
-                setDistance(formatDistance(haversineDistance(uLat, uLng, latitude, longitude)))
+                setStraightDist(formatDistance(haversineDistance(uLat, uLng, latitude, longitude)))
 
                 const map = mapRef.current
                 if (!map) return
 
-                // Place / update user marker
+                // User marker
                 if (userMarkerRef.current) {
                     userMarkerRef.current.setLatLng([uLat, uLng])
                 } else {
@@ -145,21 +158,65 @@ export default function CoordinatesModal({
                         )
                 }
 
-                // Draw / update polyline
-                if (polylineRef.current) {
-                    polylineRef.current.setLatLngs([[uLat, uLng], [latitude, longitude]])
-                } else {
-                    polylineRef.current = L.polyline(
-                        [[uLat, uLng], [latitude, longitude]],
-                        { color: '#4ade80', weight: 1.5, opacity: 0.6, dashArray: '6 6' }
-                    ).addTo(map)
-                }
-
-                // Fit both markers in view
+                // Fit view around both points while route loads
                 map.fitBounds(
                     L.latLngBounds([uLat, uLng], [latitude, longitude]),
                     { padding: [48, 48] }
                 )
+
+                // ── Fetch OSRM driving route ────────────────────────────
+                setRouteState('loading')
+                try {
+                    const url =
+                        `https://router.project-osrm.org/route/v1/driving/` +
+                        `${uLng},${uLat};${longitude},${latitude}` +
+                        `?overview=full&geometries=geojson`
+
+                    const res = await fetch(url)
+                    const data = await res.json()
+
+                    if (data.code !== 'Ok' || !data.routes?.length) {
+                        throw new Error('No route found.')
+                    }
+
+                    const route = data.routes[0]
+                    setRouteDistance(formatDistance(route.distance / 1000))
+                    setRouteDuration(formatDuration(route.duration))
+                    setRouteState('success')
+
+                    // Remove any old route layer
+                    if (routeLayerRef.current) {
+                        routeLayerRef.current.remove()
+                    }
+
+                    // Draw route — thick halo + thinner coloured line on top
+                    const halo = L.geoJSON(route.geometry, {
+                        style: { color: '#000', weight: 7, opacity: 0.18 },
+                    }).addTo(map)
+
+                    const line = L.geoJSON(route.geometry, {
+                        style: { color: '#4ade80', weight: 4, opacity: 0.85 },
+                    }).addTo(map)
+
+                    // Store as a layer group so we can remove both at once
+                    routeLayerRef.current = line
+                        ; (routeLayerRef as any).current._halo = halo
+
+                    // Fit to actual route bounds
+                    map.fitBounds(line.getBounds(), { padding: [48, 48] })
+
+                } catch {
+                    setRouteState('error')
+                    // Fall back to a straight dashed line
+                    if (routeLayerRef.current) routeLayerRef.current.remove()
+                    routeLayerRef.current = L.geoJSON(
+                        {
+                            type: 'LineString',
+                            coordinates: [[uLng, uLat], [longitude, latitude]],
+                        } as GeoJSON.Geometry,
+                        { style: { color: '#4ade80', weight: 1.5, opacity: 0.5, dashArray: '6 6' } }
+                    ).addTo(map)
+                }
             },
             (err) => {
                 setGeoState('error')
@@ -173,17 +230,23 @@ export default function CoordinatesModal({
         )
     }, [isOpen, latitude, longitude])
 
-    // ── Reset on close ────────────────────────────────────────────────────────
+    // ── Reset on close ──────────────────────────────────────────────────────
     useEffect(() => {
         if (!isOpen) {
             setGeoState('idle')
             setGeoError(null)
             setUserCoords(null)
-            setDistance(null)
+            setStraightDist(null)
+            setRouteState('idle')
+            setRouteDistance(null)
+            setRouteDuration(null)
         }
     }, [isOpen])
 
     if (!isOpen) return null
+
+    // Footer distance: prefer OSRM road distance, fall back to straight-line
+    const displayDistance = routeDistance ?? straightDist
 
     return (
         <div
@@ -201,7 +264,6 @@ export default function CoordinatesModal({
             }}
             onClick={onClose}
         >
-            {/* ── Modal Container ────────────────────────────────────────── */}
             <div
                 style={{
                     background: 'linear-gradient(135deg, rgba(167,216,245,0.1) 0%, rgba(137,194,217,0.05) 100%)',
@@ -221,10 +283,10 @@ export default function CoordinatesModal({
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Top accent bar */}
+                {/* Top accent */}
                 <div style={{ height: '2px', background: 'linear-gradient(to right, #A7D8F5, #89C2D9, transparent)' }} />
 
-                {/* ── Header ─────────────────────────────────────────────── */}
+                {/* ── Header ───────────────────────────────────────────── */}
                 <div
                     style={{
                         padding: '1.5rem 1.75rem',
@@ -237,19 +299,7 @@ export default function CoordinatesModal({
                     }}
                 >
                     <div>
-                        <h3
-                            style={{
-                                fontFamily: "'Orbitron', sans-serif",
-                                fontSize: '1.1rem',
-                                fontWeight: 900,
-                                letterSpacing: '0.1em',
-                                color: '#F4FAFF',
-                                textTransform: 'uppercase',
-                                margin: 0,
-                                marginBottom: '0.3rem',
-                                textShadow: '0 0 20px rgba(167,216,245,0.25)',
-                            }}
-                        >
+                        <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: '1.1rem', fontWeight: 900, letterSpacing: '0.1em', color: '#F4FAFF', textTransform: 'uppercase', margin: 0, marginBottom: '0.3rem', textShadow: '0 0 20px rgba(167,216,245,0.25)' }}>
                             {planetName}
                         </h3>
                         <p style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.75rem', color: 'rgba(205,239,253,0.7)', margin: 0, letterSpacing: '0.05em' }}>
@@ -257,60 +307,48 @@ export default function CoordinatesModal({
                         </p>
                     </div>
 
-                    {/* Geo status */}
-                    {geoState === 'loading' && (
-                        <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.7rem', color: '#A7D8F5', letterSpacing: '0.08em', opacity: 0.8 }}>
-                            ⟳ Locating…
-                        </span>
-                    )}
-                    {geoState === 'error' && (
-                        <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.7rem', color: '#fca5a5', letterSpacing: '0.05em', maxWidth: '220px', textAlign: 'right' }}>
-                            ⚠ {geoError}
-                        </span>
-                    )}
+                    {/* Status messages */}
+                    <div style={{ flex: 1, textAlign: 'center' }}>
+                        {geoState === 'loading' && (
+                            <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.7rem', color: '#A7D8F5', letterSpacing: '0.08em', opacity: 0.8 }}>
+                                ⟳ Locating…
+                            </span>
+                        )}
+                        {geoState === 'success' && routeState === 'loading' && (
+                            <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.7rem', color: '#A7D8F5', letterSpacing: '0.08em', opacity: 0.8 }}>
+                                ⟳ Calculating route…
+                            </span>
+                        )}
+                        {geoState === 'error' && (
+                            <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.7rem', color: '#fca5a5', letterSpacing: '0.05em' }}>
+                                ⚠ {geoError}
+                            </span>
+                        )}
+                        {routeState === 'error' && (
+                            <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.7rem', color: '#fcd34d', letterSpacing: '0.05em' }}>
+                                ⚠ Route unavailable — showing straight-line path
+                            </span>
+                        )}
+                    </div>
 
-                    {/* Close button */}
+                    {/* Close */}
                     <button
                         onClick={onClose}
-                        style={{
-                            background: 'rgba(167,216,245,0.08)',
-                            border: '1px solid rgba(167,216,245,0.25)',
-                            borderRadius: '2px',
-                            color: '#A7D8F5',
-                            width: '40px',
-                            height: '40px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            fontSize: '1.2rem',
-                            fontWeight: 'bold',
-                            transition: 'all 0.3s ease',
-                            boxShadow: '0 0 8px rgba(167,216,245,0)',
-                            flexShrink: 0,
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(167,216,245,0.15)'
-                            e.currentTarget.style.boxShadow = '0 0 12px rgba(167,216,245,0.3)'
-                            e.currentTarget.style.color = '#F4FAFF'
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(167,216,245,0.08)'
-                            e.currentTarget.style.boxShadow = '0 0 8px rgba(167,216,245,0)'
-                            e.currentTarget.style.color = '#A7D8F5'
-                        }}
+                        style={{ background: 'rgba(167,216,245,0.08)', border: '1px solid rgba(167,216,245,0.25)', borderRadius: '2px', color: '#A7D8F5', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 'bold', transition: 'all 0.3s ease', flexShrink: 0 }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(167,216,245,0.15)'; e.currentTarget.style.color = '#F4FAFF' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(167,216,245,0.08)'; e.currentTarget.style.color = '#A7D8F5' }}
                     >
                         ✕
                     </button>
                 </div>
 
-                {/* ── Map ────────────────────────────────────────────────── */}
+                {/* ── Map ──────────────────────────────────────────────── */}
                 <div
                     ref={mapContainerRef}
                     style={{ flex: 1, overflow: 'hidden', position: 'relative', borderBottom: '1px solid rgba(167,216,245,0.12)' }}
                 />
 
-                {/* ── Footer ─────────────────────────────────────────────── */}
+                {/* ── Footer ───────────────────────────────────────────── */}
                 <div
                     style={{
                         padding: '1rem 1.75rem',
@@ -323,7 +361,7 @@ export default function CoordinatesModal({
                         flexWrap: 'wrap',
                     }}
                 >
-                    {/* Target coordinates */}
+                    {/* Target */}
                     <div>
                         <p style={{ fontFamily: "'Orbitron', sans-serif", fontSize: '0.65rem', letterSpacing: '0.15em', color: '#89C2D9', textTransform: 'uppercase', margin: 0, marginBottom: '0.4rem' }}>
                             Target
@@ -333,14 +371,19 @@ export default function CoordinatesModal({
                         </p>
                     </div>
 
-                    {/* Distance */}
-                    {geoState === 'success' && distance && (
+                    {/* Route info — distance + duration */}
+                    {geoState === 'success' && displayDistance && (
                         <div style={{ textAlign: 'center' }}>
                             <p style={{ fontFamily: "'Orbitron', sans-serif", fontSize: '0.65rem', letterSpacing: '0.15em', color: '#4ade80', textTransform: 'uppercase', margin: 0, marginBottom: '0.4rem' }}>
-                                Distance
+                                {routeState === 'success' ? 'By Road' : 'Straight Line'}
                             </p>
                             <p style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.85rem', fontWeight: 700, color: '#F4FAFF', margin: 0 }}>
-                                {distance}
+                                {displayDistance}
+                                {routeDuration && (
+                                    <span style={{ color: 'rgba(244,250,255,0.55)', fontWeight: 400, marginLeft: '0.5rem' }}>
+                                        · {routeDuration}
+                                    </span>
+                                )}
                             </p>
                         </div>
                     )}
@@ -358,21 +401,13 @@ export default function CoordinatesModal({
                     ) : (
                         <div style={{ display: 'flex', gap: '3px' }}>
                             {[0, 1, 2].map((i) => (
-                                <div
-                                    key={i}
-                                    style={{
-                                        width: '3px',
-                                        height: '3px',
-                                        borderRadius: '50%',
-                                        background: i === 0 ? '#A7D8F5' : 'rgba(167,216,245,0.2)',
-                                    }}
-                                />
+                                <div key={i} style={{ width: '3px', height: '3px', borderRadius: '50%', background: i === 0 ? '#A7D8F5' : 'rgba(167,216,245,0.2)' }} />
                             ))}
                         </div>
                     )}
                 </div>
 
-                {/* Bottom accent bar */}
+                {/* Bottom accent */}
                 <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(167,216,245,0.15))' }} />
             </div>
         </div>
