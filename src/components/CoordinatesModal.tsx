@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -21,17 +21,17 @@ export default function CoordinatesModal({
 }: CoordinatesModalProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null)
     const mapRef = useRef<L.Map | null>(null)
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+    // const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
 
     // Handle window resize for responsive design
-    useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth < 768)
-        }
+    // useEffect(() => {
+    //     const handleResize = () => {
+    //         setIsMobile(window.innerWidth < 768)
+    //     }
 
-        window.addEventListener('resize', handleResize)
-        return () => window.removeEventListener('resize', handleResize)
-    }, [])
+    //     window.addEventListener('resize', handleResize)
+    //     return () => window.removeEventListener('resize', handleResize)
+    // }, [])
 
     useEffect(() => {
         if (isOpen && mapContainerRef.current && !mapRef.current) {
