@@ -36,6 +36,11 @@ export const PLANETS: PlanetConfig[] = [
             // { label: 'Gravity', value: '3.7', unit: 'm/s²' },
         ],
         button: { label: 'VIEW COORDINATES' },
+        coordinates: {
+            latitude: 18.19656744417731,
+            longitude: 120.59310380958682,
+            description: 'Mission Launch Coordinates'
+        }
     },
     {
         id: 'jupiter',

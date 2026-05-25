@@ -20,6 +20,11 @@ export interface PlanetConfig {
     facts?: PlanetFact[]
     description?: string
     button?: PlanetButton
+    coordinates?: {
+        latitude: number
+        longitude: number
+        description?: string
+    }
 }
 
 export interface CameraWaypoint {

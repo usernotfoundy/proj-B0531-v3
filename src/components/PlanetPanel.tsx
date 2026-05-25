@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { PLANETS } from '../config/planets.config'
 import { useHUD } from '../hooks/useHUD'
+import CoordinatesModal from './CoordinatesModal'
 
 export default function PlanetPanel() {
     const { activePlanetIndex, planetProgress } = useHUD()
@@ -12,6 +13,7 @@ export default function PlanetPanel() {
 
     const [renderedIndex, setRenderedIndex] = useState(activePlanetIndex)
     const [animState, setAnimState] = useState<'in' | 'out' | 'idle'>('idle')
+    const [showCoordinatesModal, setShowCoordinatesModal] = useState(false)
     const prevIndexRef = useRef(activePlanetIndex)
 
     useEffect(() => {
@@ -201,7 +203,11 @@ export default function PlanetPanel() {
                     {/* ── Button ──────────────────────────────────────────── */}
                     {PLANETS[renderedIndex].button && (
                         <button
-                            onClick={() => console.log(`Action triggered for ${PLANETS[renderedIndex].name}`)}
+                            onClick={() => {
+                                if (PLANETS[renderedIndex].coordinates) {
+                                    setShowCoordinatesModal(true)
+                                }
+                            }}
                             style={{
                                 width: '100%',
                                 padding: '0.6rem 0.8rem',
@@ -304,6 +310,17 @@ export default function PlanetPanel() {
                 pointerEvents: 'none',
             }} />
 
+            {/* ── Coordinates Modal ──────────────────────────────────── */}
+            {PLANETS[renderedIndex].coordinates && (
+                <CoordinatesModal
+                    isOpen={showCoordinatesModal}
+                    onClose={() => setShowCoordinatesModal(false)}
+                    planetName={PLANETS[renderedIndex].name}
+                    latitude={PLANETS[renderedIndex].coordinates!.latitude}
+                    longitude={PLANETS[renderedIndex].coordinates!.longitude}
+                    description={PLANETS[renderedIndex].coordinates?.description}
+                />
+            )}
         </div>
     )
 }
