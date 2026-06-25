@@ -2,6 +2,22 @@ import { useEffect, useState } from 'react'
 import type { Spaceship } from '../scene/Spaceship'
 import { loadingTracker } from '../scene/LoadingTracker'
 
+/** Add more paths from public/babies as you collect photos */
+const BABY_STICKERS = ['/babies/baby.png']
+
+interface PinnedBaby {
+    srcIndex: number
+    rotate: number
+    pinColor: string
+    delay: number
+}
+
+const PINNED_BABIES: PinnedBaby[] = [
+    { srcIndex: 0, rotate: -8, pinColor: '#E8A0BF', delay: 0.05 },
+    { srcIndex: 0, rotate: 5, pinColor: '#89C2D9', delay: 0.12 },
+    { srcIndex: 0, rotate: -5, pinColor: '#F5D78E', delay: 0.18 },
+]
+
 interface Props {
     spaceshipRef: React.MutableRefObject<Spaceship | null>
     onDismiss: () => void
@@ -71,16 +87,14 @@ export default function SplashScreen({ spaceshipRef, onDismiss }: Props) {
             }} />
 
             {/* ── Main content ──────────────────────────────────── */}
-            <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '1.2rem',
-                marginBottom: '12rem',   // push up so ship is visible below
-                opacity: phase === 'leaving' ? 0 : 1,
-                transform: phase === 'leaving' ? 'translateY(-20px)' : 'translateY(0)',
-                transition: 'opacity 0.6s ease, transform 0.6s ease',
-            }}>
+            <div
+                className="splash-main-content"
+                style={{
+                    opacity: phase === 'leaving' ? 0 : 1,
+                    transform: phase === 'leaving' ? 'translateY(-20px)' : 'translateY(0)',
+                    transition: 'opacity 0.6s ease, transform 0.6s ease',
+                }}
+            >
 
                 {/* Eyebrow */}
                 <div style={{
@@ -138,6 +152,32 @@ export default function SplashScreen({ spaceshipRef, onDismiss }: Props) {
                     <br />
                     and his celestial blessing
                 </p>
+
+                {/* ── Pinned baby row — between caption and button ─ */}
+                <div aria-hidden className="splash-baby-row">
+                    {PINNED_BABIES.map((baby, i) => (
+                        <div
+                            key={i}
+                            className="splash-baby-sticker"
+                            style={{
+                                transform: `rotate(${baby.rotate}deg)`,
+                                animation: `stickerPopIn 0.5s ease ${baby.delay}s both`,
+                            }}
+                        >
+                            <div
+                                className="splash-baby-pin"
+                                style={{
+                                    background: `radial-gradient(circle at 35% 30%, ${baby.pinColor}, ${baby.pinColor}cc)`,
+                                }}
+                            />
+                            <img
+                                src={BABY_STICKERS[baby.srcIndex]}
+                                alt=""
+                                draggable={false}
+                            />
+                        </div>
+                    ))}
+                </div>
 
             </div>
 

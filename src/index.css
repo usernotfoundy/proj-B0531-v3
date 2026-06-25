@@ -112,3 +112,105 @@ canvas {
     transform: translateX(0);
   }
 }
+
+@keyframes stickerPopIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Splash — pinned baby stickers (responsive row) */
+.splash-baby-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 72rem);
+  max-width: 96vw;
+  margin-top: clamp(0.5rem, 2vh, 1rem);
+  gap: clamp(0px, 0.7vw, 0.35rem);
+  pointer-events: none;
+}
+
+.splash-baby-sticker {
+  position: relative;
+  flex: 0 1 auto;
+  min-width: 0;
+  /* ~3 across the viewport; caps at desktop size from prior tuning */
+  width: min(22.75rem, 30.67vw);
+}
+
+.splash-baby-pin {
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), inset 0 -1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.splash-baby-sticker img {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.35));
+  user-select: none;
+}
+
+.splash-main-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(0.85rem, 2.5vh, 1.2rem);
+  width: 100%;
+  max-width: 96vw;
+  padding-inline: clamp(0.5rem, 3vw, 1.25rem);
+  margin-bottom: clamp(5.5rem, 14vh, 10rem);
+}
+
+@media (max-width: 480px) {
+  .splash-baby-row {
+    max-width: 100vw;
+    gap: 0;
+    margin-top: 0.35rem;
+    overflow: visible;
+  }
+
+  .splash-baby-sticker {
+    /* ~70% larger than prior 31vw mobile size; overlap keeps row within viewport */
+    width: 52.7vw;
+    margin-inline: 0;
+  }
+
+  .splash-baby-sticker + .splash-baby-sticker {
+    margin-left: calc((52.7vw * 3 - 96vw) / -2);
+  }
+
+  .splash-baby-pin {
+    top: -5px;
+    width: 8px;
+    height: 8px;
+  }
+
+  .splash-baby-sticker img {
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.32));
+  }
+}
+
+@media (min-width: 768px) {
+  .splash-baby-sticker {
+    width: min(22.75rem, calc((100vw - 3rem) / 3));
+  }
+}
+
+@media (min-width: 1200px) {
+  .splash-baby-sticker {
+    width: min(22.75rem, 30vw);
+  }
+}
