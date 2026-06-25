@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Spaceship } from '../scene/Spaceship'
+import { loadingTracker } from '../scene/LoadingTracker'
 
 interface Props {
     spaceshipRef: React.MutableRefObject<Spaceship | null>
@@ -8,18 +9,21 @@ interface Props {
 
 export default function SplashScreen({ spaceshipRef, onDismiss }: Props) {
     const [phase, setPhase] = useState<'launching' | 'ready' | 'leaving'>('launching')
+    const [loadProgress, setLoadProgress] = useState(0)
+
+    useEffect(() => {
+        return loadingTracker.subscribe(setLoadProgress)
+    }, [])
 
     useEffect(() => {
         let cancelled = false
 
         const waitForShip = async () => {
-            // Poll until spaceship instance exists (GLB may still be loading)
             while (!spaceshipRef.current && !cancelled) {
                 await new Promise((r) => setTimeout(r, 100))
             }
             if (cancelled) return
 
-            // Wait for entry animation to complete
             await spaceshipRef.current!.ready
             if (!cancelled) setPhase('ready')
         }
@@ -208,35 +212,53 @@ export default function SplashScreen({ spaceshipRef, onDismiss }: Props) {
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '0.6rem',
+                    gap: '0.75rem',
                     opacity: phase === 'launching' ? 1 : 0,
                     transition: 'opacity 0.4s ease',
                     pointerEvents: 'none',
+                    width: 'min(280px, 70vw)',
                 }}
             >
-                {/* Animated dots */}
-                <div style={{ display: 'flex', gap: '0.4rem' }}>
-                    {[0, 1, 2].map((i) => (
-                        <div
-                            key={i}
-                            style={{
-                                width: '4px',
-                                height: '4px',
-                                borderRadius: '50%',
-                                background: '#89C2D9',
-                                animation: `blink 1.2s ${i * 0.2}s ease-in-out infinite`,
-                            }}
-                        />
-                    ))}
+                <div style={{
+                    width: '100%',
+                    height: '2px',
+                    background: 'rgba(137,194,217,0.15)',
+                    borderRadius: '1px',
+                    overflow: 'hidden',
+                }}>
+                    <div style={{
+                        height: '100%',
+                        width: `${Math.round(loadProgress * 100)}%`,
+                        background: 'linear-gradient(to right, #89C2D9, #A7D8F5)',
+                        transition: 'width 0.2s ease',
+                    }} />
                 </div>
                 <span style={{
                     fontSize: '0.45rem',
                     letterSpacing: '0.3em',
-                    color: 'rgba(137,194,217,0.4)',
+                    color: 'rgba(137,194,217,0.5)',
                     textTransform: 'uppercase',
                 }}>
-                    Launching
+                    {loadProgress < 1
+                        ? `Loading assets ${Math.round(loadProgress * 100)}%`
+                        : 'Launching'}
                 </span>
+                {loadProgress < 1 && (
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        {[0, 1, 2].map((i) => (
+                            <div
+                                key={i}
+                                style={{
+                                    width: '4px',
+                                    height: '4px',
+                                    borderRadius: '50%',
+                                    background: '#89C2D9',
+                                    animation: `blink 1.2s ${i * 0.2}s ease-in-out infinite`,
+                                }}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* ── Bottom decoration line ─────────────────────────── */}

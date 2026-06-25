@@ -1,11 +1,12 @@
-import { useState, useRef } from 'react'
+import { lazy, Suspense, useState, useRef } from 'react'
 import SpaceCanvas from './components/SpaceCanvas'
-import HUD from './components/HUD'
-import PlanetPanel from './components/PlanetPanel'
 import SplashScreen from './components/SplashScreen'
 import ScrollContainer from './components/ScrollContainer'
-import CoordinatesModal from './components/CoordinatesModal'
 import { useSpaceScene } from './hooks/useSpaceScene'
+
+const HUD = lazy(() => import('./components/HUD'))
+const PlanetPanel = lazy(() => import('./components/PlanetPanel'))
+const CoordinatesModal = lazy(() => import('./components/CoordinatesModal'))
 
 interface CoordinatesData {
   latitude: number
@@ -36,21 +37,23 @@ export default function App() {
       )}
 
       {splashDone && (
-        <>
+        <Suspense fallback={null}>
           <HUD />
           <PlanetPanel onShowCoordinates={setCoordinatesModal} />
-        </>
+        </Suspense>
       )}
 
       {coordinatesModal && (
-        <CoordinatesModal
-          isOpen={!!coordinatesModal}
-          onClose={() => setCoordinatesModal(null)}
-          planetName={coordinatesModal.planetName}
-          latitude={coordinatesModal.latitude}
-          longitude={coordinatesModal.longitude}
-          description={coordinatesModal.description}
-        />
+        <Suspense fallback={null}>
+          <CoordinatesModal
+            isOpen={!!coordinatesModal}
+            onClose={() => setCoordinatesModal(null)}
+            planetName={coordinatesModal.planetName}
+            latitude={coordinatesModal.latitude}
+            longitude={coordinatesModal.longitude}
+            description={coordinatesModal.description}
+          />
+        </Suspense>
       )}
     </>
   )

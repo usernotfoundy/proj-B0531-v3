@@ -25,8 +25,9 @@ export class Sun {
         this.coronaMesh = this.createCorona()
         this.group.add(this.coronaMesh)
 
-        // ── Lens flare ────────────────────────────────────────────────
-        this.addLensflare()
+        if (sceneManager.enableLensflare) {
+            this.addLensflare()
+        }
 
         // ── Tick — subtle pulse ───────────────────────────────────────
         this.registerTick(sceneManager)

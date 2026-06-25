@@ -4,6 +4,7 @@ import { PlanetRegistry } from '../scene/PlanetRegistry'
 import { CameraPath } from '../scene/CameraPath'
 import { Sun } from '../scene/Sun'
 import { Spaceship } from '../scene/Spaceship'
+import { PLANETS } from '../config/planets.config'
 
 export function useSpaceScene(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
     const sceneManagerRef = useRef<SceneManager | null>(null)
@@ -30,7 +31,25 @@ export function useSpaceScene(canvasRef: React.RefObject<HTMLCanvasElement | nul
 
         sceneManager.start()
 
+        const handleScroll = () => {
+            const scrolled = window.scrollY
+            const totalHeight = document.documentElement.scrollHeight - window.innerHeight
+            if (totalHeight <= 0) return
+
+            const scrollProgress = Math.min(scrolled / totalHeight, 1)
+            const sliceSize = 1 / PLANETS.length
+            const activeIndex = Math.min(
+                Math.floor(scrollProgress / sliceSize),
+                PLANETS.length - 1
+            )
+
+            registry.ensureNearbyLoaded(activeIndex)
+        }
+
+        window.addEventListener('scroll', handleScroll, { passive: true })
+
         return () => {
+            window.removeEventListener('scroll', handleScroll)
             cameraPath.destroy()
             registry.dispose()
             sun.dispose()
@@ -40,4 +59,4 @@ export function useSpaceScene(canvasRef: React.RefObject<HTMLCanvasElement | nul
     }, [])
 
     return { sceneManagerRef, registryRef, cameraPathRef, sunRef, spaceshipRef }
-} 
+}

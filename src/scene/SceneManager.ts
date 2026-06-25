@@ -1,88 +1,88 @@
 import * as THREE from 'three'
 import { PostProcessor } from './PostProcessor'
 import { SUN_POSITION } from './Sun'
+import { getPerformanceProfile } from '../utils/performance'
 
 export class SceneManager {
     scene: THREE.Scene
     camera: THREE.PerspectiveCamera
     renderer: THREE.WebGLRenderer
-    private postProcessor: PostProcessor
+    private postProcessor: PostProcessor | null = null
     private animationId: number | null = null
     private onTickCallbacks: Array<(delta: number) => void> = []
     private clock: THREE.Clock
+    private readonly profile = getPerformanceProfile()
+    private visible = true
 
     constructor(canvas: HTMLCanvasElement) {
         const w = canvas.clientWidth || window.innerWidth
         const h = canvas.clientHeight || window.innerHeight
 
-        // ── Scene ──────────────────────────────────────────────────────
         this.scene = new THREE.Scene()
         this.scene.background = new THREE.Color(0x00000f)
         this.scene.fog = new THREE.FogExp2(0x00000f, 0.004)
 
-        // ── Camera ─────────────────────────────────────────────────────
         this.camera = new THREE.PerspectiveCamera(60, w / h, 0.1, 2000)
         this.camera.position.set(0, 0, 20)
         this.camera.lookAt(0, 0, 0)
 
-        // ── Renderer ───────────────────────────────────────────────────
         this.renderer = new THREE.WebGLRenderer({
             canvas,
-            antialias: true,
+            antialias: this.profile.antialias,
             alpha: false,
             powerPreference: 'high-performance',
         })
         this.renderer.setSize(w, h)
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+        this.renderer.setPixelRatio(
+            Math.min(window.devicePixelRatio, this.profile.pixelRatioCap)
+        )
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping
         this.renderer.toneMappingExposure = 1.1
-        this.renderer.shadowMap.enabled = true
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+        this.renderer.shadowMap.enabled = this.profile.shadows
+        if (this.profile.shadows) {
+            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+        }
 
-        // ── Post-processing ────────────────────────────────────────────
-        // Must be created AFTER renderer
-        this.postProcessor = new PostProcessor(
-            this.renderer,
-            this.scene,
-            this.camera
-        )
+        if (this.profile.bloom) {
+            this.postProcessor = new PostProcessor(
+                this.renderer,
+                this.scene,
+                this.camera
+            )
+        }
 
-        // ── Lights ─────────────────────────────────────────────────────
         this.addLights()
+        this.addStarfield(this.profile.starCount)
 
-        // ── Stars ──────────────────────────────────────────────────────
-        this.addStarfield()
-
-        // ── Clock ──────────────────────────────────────────────────────
         this.clock = new THREE.Clock()
 
-        // ── Resize ─────────────────────────────────────────────────────
         window.addEventListener('resize', this.handleResize)
+        document.addEventListener('visibilitychange', this.handleVisibility)
     }
 
-    // ── Lights ─────────────────────────────────────────────────────────
+    get enableLensflare() {
+        return this.profile.lensflare
+    }
+
     private addLights() {
-        // Ambient — lifts shadow side off pure black
         const ambient = new THREE.AmbientLight(0x223344, 1.5)
         this.scene.add(ambient)
 
-        // Sun light — positioned at the actual sun object
         const sunLight = new THREE.PointLight(0xfff4e0, 6, 0, 0)
         sunLight.position.copy(SUN_POSITION)
-        sunLight.castShadow = true
-        sunLight.shadow.mapSize.width = 1024
-        sunLight.shadow.mapSize.height = 1024
+        if (this.profile.shadows) {
+            sunLight.castShadow = true
+            sunLight.shadow.mapSize.width = 512
+            sunLight.shadow.mapSize.height = 512
+        }
         this.scene.add(sunLight)
 
-        // Rim light — cold blue edge on the shadow side
         const rimLight = new THREE.DirectionalLight(0x2255aa, 0.8)
         rimLight.position.set(100, -20, -100)
         this.scene.add(rimLight)
     }
 
-    // ── Starfield ───────────────────────────────────────────────────────
-    private addStarfield() {
-        const starCount = 8000
+    private addStarfield(starCount: number) {
         const positions = new Float32Array(starCount * 3)
         const sizes = new Float32Array(starCount)
 
@@ -110,7 +110,6 @@ export class SceneManager {
         this.scene.add(stars)
     }
 
-    // ── Resize ──────────────────────────────────────────────────────────
     private handleResize = () => {
         const width = window.innerWidth
         const height = window.innerHeight
@@ -118,41 +117,53 @@ export class SceneManager {
         this.camera.aspect = width / height
         this.camera.updateProjectionMatrix()
         this.renderer.setSize(width, height)
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+        this.renderer.setPixelRatio(
+            Math.min(window.devicePixelRatio, this.profile.pixelRatioCap)
+        )
 
-        // Resize composer too — critical, otherwise bloom is wrong resolution
-        this.postProcessor.resize(width, height)
+        this.postProcessor?.resize(width, height)
     }
 
-    // ── Tick registration ────────────────────────────────────────────────
+    private handleVisibility = () => {
+        this.visible = document.visibilityState === 'visible'
+        if (this.visible) {
+            this.clock.start()
+        }
+    }
+
     onTick(fn: (delta: number) => void) {
         this.onTickCallbacks.push(fn)
     }
 
-    // ── Render loop ──────────────────────────────────────────────────────
     start() {
         this.clock.start()
         const loop = () => {
             this.animationId = requestAnimationFrame(loop)
+
+            if (!this.visible) return
+
             const delta = this.clock.getDelta()
 
             for (const cb of this.onTickCallbacks) {
                 cb(delta)
             }
 
-            // composer.render() replaces renderer.render()
-            this.postProcessor.render()
+            if (this.postProcessor) {
+                this.postProcessor.render()
+            } else {
+                this.renderer.render(this.scene, this.camera)
+            }
         }
         loop()
     }
 
-    // ── Cleanup ──────────────────────────────────────────────────────────
     destroy() {
         if (this.animationId !== null) {
             cancelAnimationFrame(this.animationId)
         }
         window.removeEventListener('resize', this.handleResize)
-        this.postProcessor.dispose()
+        document.removeEventListener('visibilitychange', this.handleVisibility)
+        this.postProcessor?.dispose()
         this.renderer.dispose()
     }
 }

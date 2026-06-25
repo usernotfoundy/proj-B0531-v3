@@ -1,7 +1,15 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import gsap from 'gsap'
 import type { SceneManager } from './SceneManager'
+import { loadingTracker } from './LoadingTracker'
+
+function createModelLoader() {
+    const loader = new GLTFLoader()
+    loader.setMeshoptDecoder(MeshoptDecoder)
+    return loader
+}
 
 // Middle-bottom third person — centered, low in frame, close
 const OFFSET_X = 0.0
@@ -33,7 +41,7 @@ export class Spaceship {
     }
 
     private load(sceneManager: SceneManager) {
-        const loader = new GLTFLoader()
+        const loader = createModelLoader()
 
         loader.load(
             '/models/spaceship.glb',
@@ -121,10 +129,15 @@ export class Spaceship {
                 this.prevCamPos.copy(cam.position)
                 this.registerTick(sceneManager)
 
+                loadingTracker.markComplete('spaceship')
                 console.log('[Spaceship] ✓ loaded')
             },
 
-            undefined,
+            (event) => {
+                if (event.lengthComputable) {
+                    loadingTracker.report('spaceship', event.loaded, event.total)
+                }
+            },
 
             (error) => console.error('[Spaceship] ✗ failed to load', error)
         )
