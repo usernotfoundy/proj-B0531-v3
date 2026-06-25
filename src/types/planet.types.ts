@@ -14,6 +14,17 @@ export interface GodparentsData {
     godfathers: GodparentEntry[]
 }
 
+export interface HealthProtocolItem {
+    title: string
+    detail?: string
+}
+
+export interface HealthProtocolsData {
+    title: string
+    intro: string
+    protocols: HealthProtocolItem[]
+}
+
 export interface PlanetButton {
     label: string
     action?: string
@@ -36,6 +47,7 @@ export interface PlanetConfig {
         description?: string
     }
     godparents?: GodparentsData
+    healthProtocols?: HealthProtocolsData
 }
 
 export interface CameraWaypoint {

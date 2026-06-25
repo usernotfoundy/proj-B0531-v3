@@ -3,12 +3,13 @@ import SpaceCanvas from './components/SpaceCanvas'
 import SplashScreen from './components/SplashScreen'
 import ScrollContainer from './components/ScrollContainer'
 import { useSpaceScene } from './hooks/useSpaceScene'
-import type { GodparentsData } from './types/planet.types'
+import type { GodparentsData, HealthProtocolsData } from './types/planet.types'
 
 const HUD = lazy(() => import('./components/HUD'))
 const PlanetPanel = lazy(() => import('./components/PlanetPanel'))
 const CoordinatesModal = lazy(() => import('./components/CoordinatesModal'))
 const GodparentsModal = lazy(() => import('./components/GodparentsModal'))
+const HealthProtocolsModal = lazy(() => import('./components/HealthProtocolsModal'))
 
 interface CoordinatesData {
   latitude: number
@@ -23,12 +24,18 @@ interface GodparentsModalData {
   godparents: GodparentsData
 }
 
+interface HealthProtocolsModalData {
+  planetName: string
+  healthProtocols: HealthProtocolsData
+}
+
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { spaceshipRef } = useSpaceScene(canvasRef)
   const [splashDone, setSplashDone] = useState(false)
   const [coordinatesModal, setCoordinatesModal] = useState<CoordinatesData | null>(null)
   const [godparentsModal, setGodparentsModal] = useState<GodparentsModalData | null>(null)
+  const [healthProtocolsModal, setHealthProtocolsModal] = useState<HealthProtocolsModalData | null>(null)
 
   return (
     <>
@@ -51,6 +58,7 @@ export default function App() {
           <PlanetPanel
             onShowCoordinates={setCoordinatesModal}
             onShowGodparents={setGodparentsModal}
+            onShowHealthProtocols={setHealthProtocolsModal}
           />
         </Suspense>
       )}
@@ -75,6 +83,16 @@ export default function App() {
             planetName={godparentsModal.planetName}
             description={godparentsModal.description}
             godparents={godparentsModal.godparents}
+          />
+        </Suspense>
+      )}
+      {healthProtocolsModal && (
+        <Suspense fallback={null}>
+          <HealthProtocolsModal
+            isOpen={!!healthProtocolsModal}
+            onClose={() => setHealthProtocolsModal(null)}
+            planetName={healthProtocolsModal.planetName}
+            healthProtocols={healthProtocolsModal.healthProtocols}
           />
         </Suspense>
       )}

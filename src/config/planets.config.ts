@@ -1,5 +1,6 @@
 import type { PlanetConfig } from '../types/planet.types'
 import { GODPARENTS } from './godparents.config'
+import { HEALTH_PROTOCOLS } from './healthProtocols.config'
 
 export const PLANETS: PlanetConfig[] = [
     {
@@ -61,16 +62,15 @@ export const PLANETS: PlanetConfig[] = [
         position: [30, -6, -400],
         displaySize: 30,
         rotationSpeed: 0.0018,
-        description: 'We invite our crew to dress in celestial shades. Think atmospheric blues, moonbeam whites, or cosmic silver.',
+        description: HEALTH_PROTOCOLS.intro,
         facts: [
-            { label: '1', value: 'Face masks must remain on at all times.', unit: 'Please?' },
-            { label: '2', value: 'Strictly NO SMOKING!', unit: 'You read that right!' },
-            { label: '3', value: 'Sanitize hands before entering the station.', unit: 'Alright!' },
-            // { label: 'Moons', value: '146' },
-            // { label: 'Surface Temp', value: '-140', unit: '°C avg' },
-            // { label: 'Gravity', value: '10.4', unit: 'm/s²' },
+            { label: '01', value: 'No Kissing', unit: 'Xyz' },
+            { label: '02', value: 'No Smoking', unit: 'OR VAPING' },
+            { label: '03', value: 'Sanitize Hands', unit: 'BEFORE TOUCHING' },
+            { label: '04', value: 'Wear Facemask', unit: 'OR STAY HOME' },
         ],
-        // button: { label: 'INVESTIGATE' },
+        healthProtocols: HEALTH_PROTOCOLS,
+        button: { label: 'VIEW HEALTH PROTOCOLS' },
     },
     {
         id: 'uranus',

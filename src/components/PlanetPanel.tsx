@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { PLANETS } from '../config/planets.config'
 import { useHUD } from '../hooks/useHUD'
-import type { GodparentsData } from '../types/planet.types'
+import type { GodparentsData, HealthProtocolsData } from '../types/planet.types'
 
 interface CoordinatesData {
   latitude: number
@@ -16,12 +16,18 @@ interface GodparentsModalData {
   godparents: GodparentsData
 }
 
+interface HealthProtocolsModalData {
+  planetName: string
+  healthProtocols: HealthProtocolsData
+}
+
 interface PlanetPanelProps {
   onShowCoordinates?: (data: CoordinatesData) => void
   onShowGodparents?: (data: GodparentsModalData) => void
+  onShowHealthProtocols?: (data: HealthProtocolsModalData) => void
 }
 
-export default function PlanetPanel({ onShowCoordinates, onShowGodparents }: PlanetPanelProps) {
+export default function PlanetPanel({ onShowCoordinates, onShowGodparents, onShowHealthProtocols }: PlanetPanelProps) {
     const { activePlanetIndex, planetProgress } = useHUD()
     // const planet = PLANETS[activePlanetIndex]
 
@@ -246,6 +252,11 @@ export default function PlanetPanel({ onShowCoordinates, onShowGodparents }: Pla
                                         planetName: planet.name,
                                         description: planet.description,
                                         godparents: planet.godparents,
+                                    })
+                                } else if (planet.healthProtocols && onShowHealthProtocols) {
+                                    onShowHealthProtocols({
+                                        planetName: planet.name,
+                                        healthProtocols: planet.healthProtocols,
                                     })
                                 }
                             }}
