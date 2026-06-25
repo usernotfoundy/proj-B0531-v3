@@ -3,13 +3,14 @@ import SpaceCanvas from './components/SpaceCanvas'
 import SplashScreen from './components/SplashScreen'
 import ScrollContainer from './components/ScrollContainer'
 import { useSpaceScene } from './hooks/useSpaceScene'
-import type { GodparentsData, HealthProtocolsData } from './types/planet.types'
+import type { GodparentsData, HealthProtocolsData, PhotoGalleryData } from './types/planet.types'
 
 const HUD = lazy(() => import('./components/HUD'))
 const PlanetPanel = lazy(() => import('./components/PlanetPanel'))
 const CoordinatesModal = lazy(() => import('./components/CoordinatesModal'))
 const GodparentsModal = lazy(() => import('./components/GodparentsModal'))
 const HealthProtocolsModal = lazy(() => import('./components/HealthProtocolsModal'))
+const PhotoGalleryModal = lazy(() => import('./components/PhotoGalleryModal'))
 
 interface CoordinatesData {
   latitude: number
@@ -29,6 +30,11 @@ interface HealthProtocolsModalData {
   healthProtocols: HealthProtocolsData
 }
 
+interface PhotoGalleryModalData {
+  planetName: string
+  photoGallery: PhotoGalleryData
+}
+
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { spaceshipRef } = useSpaceScene(canvasRef)
@@ -36,6 +42,7 @@ export default function App() {
   const [coordinatesModal, setCoordinatesModal] = useState<CoordinatesData | null>(null)
   const [godparentsModal, setGodparentsModal] = useState<GodparentsModalData | null>(null)
   const [healthProtocolsModal, setHealthProtocolsModal] = useState<HealthProtocolsModalData | null>(null)
+  const [photoGalleryModal, setPhotoGalleryModal] = useState<PhotoGalleryModalData | null>(null)
 
   return (
     <>
@@ -59,6 +66,7 @@ export default function App() {
             onShowCoordinates={setCoordinatesModal}
             onShowGodparents={setGodparentsModal}
             onShowHealthProtocols={setHealthProtocolsModal}
+            onShowPhotoGallery={setPhotoGalleryModal}
           />
         </Suspense>
       )}
@@ -93,6 +101,16 @@ export default function App() {
             onClose={() => setHealthProtocolsModal(null)}
             planetName={healthProtocolsModal.planetName}
             healthProtocols={healthProtocolsModal.healthProtocols}
+          />
+        </Suspense>
+      )}
+      {photoGalleryModal && (
+        <Suspense fallback={null}>
+          <PhotoGalleryModal
+            isOpen={!!photoGalleryModal}
+            onClose={() => setPhotoGalleryModal(null)}
+            planetName={photoGalleryModal.planetName}
+            photoGallery={photoGalleryModal.photoGallery}
           />
         </Suspense>
       )}

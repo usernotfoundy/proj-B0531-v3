@@ -1,4 +1,5 @@
 import type { PlanetConfig } from '../types/planet.types'
+import { BABY_PHOTO_GALLERY } from './babyPhotos.config'
 import { GODPARENTS } from './godparents.config'
 import { HEALTH_PROTOCOLS } from './healthProtocols.config'
 
@@ -74,21 +75,20 @@ export const PLANETS: PlanetConfig[] = [
     },
     {
         id: 'uranus',
-        name: 'Uranus',
+        name: 'PHOTO GALLERY',
         modelPath: '/models/uranus.glb',
         position: [-20, 10, -540],
         displaySize: 25,
         rotationSpeed: 0.0015,
-        description: 'The tilted giant. Uranus orbits the sun essentially on its side, its poles facing the sun in turn.',
+        description: BABY_PHOTO_GALLERY.subtitle,
         facts: [
-            { label: 'Diameter', value: '50,724', unit: 'km' },
-            { label: 'Distance to Sun', value: '2,867', unit: 'mil km' },
-            { label: 'Day Length', value: '17.2', unit: 'hours' },
-            { label: 'Moons', value: '28' },
-            { label: 'Surface Temp', value: '-195', unit: '°C avg' },
-            { label: 'Gravity', value: '8.7', unit: 'm/s²' },
+            { label: 'Memories', value: String(BABY_PHOTO_GALLERY.photos.length), unit: 'PHOTOS' },
+            { label: 'Milestone', value: '1st', unit: 'BIRTHDAY' },
+            { label: 'Orbit', value: '365', unit: 'DAYS' },
+            { label: 'Theme', value: 'Baby', unit: 'SHOWCASE' },
         ],
-        // button: { label: 'SCAN' },
+        photoGallery: BABY_PHOTO_GALLERY,
+        button: { label: 'VIEW GALLERY' },
     },
     {
         id: 'neptune',

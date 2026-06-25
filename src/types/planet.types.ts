@@ -26,6 +26,21 @@ export interface HealthProtocolsData {
     protocols: HealthProtocolItem[]
 }
 
+export interface BabyPhoto {
+    /** URL or path under public/ (e.g. /babies/photo-01.jpg) */
+    src: string
+    alt?: string
+    colSpan: number
+    rowSpan: number
+}
+
+export interface PhotoGalleryData {
+    eyebrow?: string
+    title: string
+    subtitle: string
+    photos: BabyPhoto[]
+}
+
 export interface PlanetButton {
     label: string
     action?: string
@@ -49,6 +64,7 @@ export interface PlanetConfig {
     }
     godparents?: GodparentsData
     healthProtocols?: HealthProtocolsData
+    photoGallery?: PhotoGalleryData
 }
 
 export interface CameraWaypoint {

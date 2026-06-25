@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { PLANETS } from '../config/planets.config'
 import { useHUD } from '../hooks/useHUD'
-import type { GodparentsData, HealthProtocolsData } from '../types/planet.types'
+import type { GodparentsData, HealthProtocolsData, PhotoGalleryData } from '../types/planet.types'
 
 interface CoordinatesData {
   latitude: number
@@ -21,13 +21,19 @@ interface HealthProtocolsModalData {
   healthProtocols: HealthProtocolsData
 }
 
+interface PhotoGalleryModalData {
+  planetName: string
+  photoGallery: PhotoGalleryData
+}
+
 interface PlanetPanelProps {
   onShowCoordinates?: (data: CoordinatesData) => void
   onShowGodparents?: (data: GodparentsModalData) => void
   onShowHealthProtocols?: (data: HealthProtocolsModalData) => void
+  onShowPhotoGallery?: (data: PhotoGalleryModalData) => void
 }
 
-export default function PlanetPanel({ onShowCoordinates, onShowGodparents, onShowHealthProtocols }: PlanetPanelProps) {
+export default function PlanetPanel({ onShowCoordinates, onShowGodparents, onShowHealthProtocols, onShowPhotoGallery }: PlanetPanelProps) {
     const { activePlanetIndex, planetProgress } = useHUD()
     // const planet = PLANETS[activePlanetIndex]
 
@@ -257,6 +263,11 @@ export default function PlanetPanel({ onShowCoordinates, onShowGodparents, onSho
                                     onShowHealthProtocols({
                                         planetName: planet.name,
                                         healthProtocols: planet.healthProtocols,
+                                    })
+                                } else if (planet.photoGallery && onShowPhotoGallery) {
+                                    onShowPhotoGallery({
+                                        planetName: planet.name,
+                                        photoGallery: planet.photoGallery,
                                     })
                                 }
                             }}
