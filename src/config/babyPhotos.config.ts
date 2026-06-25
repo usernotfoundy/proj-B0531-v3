@@ -1,8 +1,8 @@
 import type { PhotoGalleryData } from '../types/planet.types'
 
 /** Sample web URLs for now — swap any entry to `/babies/your-photo.jpg` when ready */
-const unsplash = (id: string, w = 800) =>
-    `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`
+// const unsplash = (id: string, w = 800) =>
+//     `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`
 
 export const BABY_PHOTO_GALLERY: PhotoGalleryData = {
     eyebrow: 'Our Stories',
