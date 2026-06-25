@@ -17,6 +17,7 @@ export interface GodparentsData {
 export interface HealthProtocolItem {
     title: string
     detail?: string
+    icon: 'no-kiss' | 'no-smoking' | 'sanitize' | 'facemask'
 }
 
 export interface HealthProtocolsData {
