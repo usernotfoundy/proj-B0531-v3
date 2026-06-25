@@ -134,7 +134,7 @@ export default function SplashScreen({ spaceshipRef, onDismiss }: Props) {
                     maxWidth: '90vw',
                     textTransform: 'none',
                 }}>
-                    Join us as we celebrate Emz's first trip around the sun
+                    Join us as we celebrate Xyz's first trip around the sun
                     <br />
                     and his celestial blessing
                 </p>

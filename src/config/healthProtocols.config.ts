@@ -17,7 +17,7 @@ export const HEALTH_PROTOCOLS: HealthProtocolsData = {
         },
         {
             icon: 'sanitize',
-            title: 'ALWAYS SANITIZE YOUR HANDS BEFORE TOUCHING XYZ',
+            title: 'ALWAYS SANITIZE YOUR HANDS BEFORE TOUCHING Xyz',
             detail: 'Hand sanitizer will be available at the entrance. Please sanitize before holding or interacting with the baby.',
         },
         {
