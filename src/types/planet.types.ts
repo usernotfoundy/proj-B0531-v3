@@ -4,6 +4,16 @@ export interface PlanetFact {
     unit?: string
 }
 
+export interface GodparentEntry {
+    title: string
+    name: string
+}
+
+export interface GodparentsData {
+    godmothers: GodparentEntry[]
+    godfathers: GodparentEntry[]
+}
+
 export interface PlanetButton {
     label: string
     action?: string
@@ -25,6 +35,7 @@ export interface PlanetConfig {
         longitude: number
         description?: string
     }
+    godparents?: GodparentsData
 }
 
 export interface CameraWaypoint {

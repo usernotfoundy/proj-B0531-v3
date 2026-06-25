@@ -3,10 +3,12 @@ import SpaceCanvas from './components/SpaceCanvas'
 import SplashScreen from './components/SplashScreen'
 import ScrollContainer from './components/ScrollContainer'
 import { useSpaceScene } from './hooks/useSpaceScene'
+import type { GodparentsData } from './types/planet.types'
 
 const HUD = lazy(() => import('./components/HUD'))
 const PlanetPanel = lazy(() => import('./components/PlanetPanel'))
 const CoordinatesModal = lazy(() => import('./components/CoordinatesModal'))
+const GodparentsModal = lazy(() => import('./components/GodparentsModal'))
 
 interface CoordinatesData {
   latitude: number
@@ -15,11 +17,18 @@ interface CoordinatesData {
   description?: string
 }
 
+interface GodparentsModalData {
+  planetName: string
+  description?: string
+  godparents: GodparentsData
+}
+
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { spaceshipRef } = useSpaceScene(canvasRef)
   const [splashDone, setSplashDone] = useState(false)
   const [coordinatesModal, setCoordinatesModal] = useState<CoordinatesData | null>(null)
+  const [godparentsModal, setGodparentsModal] = useState<GodparentsModalData | null>(null)
 
   return (
     <>
@@ -39,7 +48,10 @@ export default function App() {
       {splashDone && (
         <Suspense fallback={null}>
           <HUD />
-          <PlanetPanel onShowCoordinates={setCoordinatesModal} />
+          <PlanetPanel
+            onShowCoordinates={setCoordinatesModal}
+            onShowGodparents={setGodparentsModal}
+          />
         </Suspense>
       )}
 
@@ -52,6 +64,17 @@ export default function App() {
             latitude={coordinatesModal.latitude}
             longitude={coordinatesModal.longitude}
             description={coordinatesModal.description}
+          />
+        </Suspense>
+      )}
+      {godparentsModal && (
+        <Suspense fallback={null}>
+          <GodparentsModal
+            isOpen={!!godparentsModal}
+            onClose={() => setGodparentsModal(null)}
+            planetName={godparentsModal.planetName}
+            description={godparentsModal.description}
+            godparents={godparentsModal.godparents}
           />
         </Suspense>
       )}

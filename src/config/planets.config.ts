@@ -1,4 +1,5 @@
 import type { PlanetConfig } from '../types/planet.types'
+import { GODPARENTS } from './godparents.config'
 
 export const PLANETS: PlanetConfig[] = [
     {
@@ -9,15 +10,8 @@ export const PLANETS: PlanetConfig[] = [
         displaySize: 10,
         rotationSpeed: 0.002,
         description: 'Meet the specialized guardians overseeing this journey.',
-        facts: [
-            { label: 'Commander', value: 'Mark', unit: 'GODFATHER' },
-            { label: 'Navigator', value: 'Sarah', unit: 'GODMOTHER' },
-            { label: 'Engineer', value: 'David', unit: 'GODFATHER' },
-            { label: 'Officer', value: 'Elena', unit: 'GODMOTHER' },
-            // { label: 'Surface Temp', value: '15', unit: '°C avg' },
-            // { label: 'Gravity', value: '9.8', unit: 'm/s²' },
-        ],
-        // button: { label: 'LEARN MORE' },
+        godparents: GODPARENTS,
+        button: { label: 'VIEW CREW ROSTER' },
     },
     {
         id: 'mars',

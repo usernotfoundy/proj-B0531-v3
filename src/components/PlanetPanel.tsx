@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { PLANETS } from '../config/planets.config'
 import { useHUD } from '../hooks/useHUD'
+import type { GodparentsData } from '../types/planet.types'
 
 interface CoordinatesData {
   latitude: number
@@ -9,11 +10,18 @@ interface CoordinatesData {
   description?: string
 }
 
-interface PlanetPanelProps {
-  onShowCoordinates?: (data: CoordinatesData) => void
+interface GodparentsModalData {
+  planetName: string
+  description?: string
+  godparents: GodparentsData
 }
 
-export default function PlanetPanel({ onShowCoordinates }: PlanetPanelProps) {
+interface PlanetPanelProps {
+  onShowCoordinates?: (data: CoordinatesData) => void
+  onShowGodparents?: (data: GodparentsModalData) => void
+}
+
+export default function PlanetPanel({ onShowCoordinates, onShowGodparents }: PlanetPanelProps) {
     const { activePlanetIndex, planetProgress } = useHUD()
     // const planet = PLANETS[activePlanetIndex]
 
@@ -41,6 +49,19 @@ export default function PlanetPanel({ onShowCoordinates }: PlanetPanelProps) {
             setAnimState('out')
         }
     }, [isVisible])
+
+    const planet = PLANETS[renderedIndex]
+    const panelFacts = planet.godparents
+        ? [
+            { label: 'Godmothers', value: String(planet.godparents.godmothers.length), unit: 'NINANG' },
+            { label: 'Godfathers', value: String(planet.godparents.godfathers.length), unit: 'NINONG' },
+            {
+                label: 'Total Crew',
+                value: String(planet.godparents.godmothers.length + planet.godparents.godfathers.length),
+                unit: 'GUARDIANS',
+            },
+        ]
+        : planet.facts
 
     return (
         <div
@@ -157,13 +178,13 @@ export default function PlanetPanel({ onShowCoordinates }: PlanetPanelProps) {
                     )}
 
                     {/* ── Facts grid ──────────────────────────────────────── */}
-                    {PLANETS[renderedIndex].facts && (
+                    {panelFacts && (
                         <div style={{
                             display: 'grid',
                             gridTemplateColumns: '1fr 1fr',
                             gap: '0.1rem',
                         }}>
-                            {PLANETS[renderedIndex].facts!.map((fact, i) => (
+                            {panelFacts.map((fact, i) => (
                                 <div
                                     key={fact.label}
                                     style={{
@@ -210,15 +231,21 @@ export default function PlanetPanel({ onShowCoordinates }: PlanetPanelProps) {
                     )}
 
                     {/* ── Button ──────────────────────────────────────────── */}
-                    {PLANETS[renderedIndex].button && (
+                    {planet.button && (
                         <button
                             onClick={() => {
-                                if (PLANETS[renderedIndex].coordinates && onShowCoordinates) {
+                                if (planet.coordinates && onShowCoordinates) {
                                     onShowCoordinates({
-                                        latitude: PLANETS[renderedIndex].coordinates!.latitude,
-                                        longitude: PLANETS[renderedIndex].coordinates!.longitude,
-                                        planetName: PLANETS[renderedIndex].name,
-                                        description: PLANETS[renderedIndex].coordinates?.description,
+                                        latitude: planet.coordinates.latitude,
+                                        longitude: planet.coordinates.longitude,
+                                        planetName: planet.name,
+                                        description: planet.coordinates.description,
+                                    })
+                                } else if (planet.godparents && onShowGodparents) {
+                                    onShowGodparents({
+                                        planetName: planet.name,
+                                        description: planet.description,
+                                        godparents: planet.godparents,
                                     })
                                 }
                             }}
@@ -252,7 +279,7 @@ export default function PlanetPanel({ onShowCoordinates }: PlanetPanelProps) {
                                 e.currentTarget.style.color = '#A7D8F5';
                             }}
                         >
-                            {PLANETS[renderedIndex].button.label}
+                            {planet.button.label}
                         </button>
                     )}
 
