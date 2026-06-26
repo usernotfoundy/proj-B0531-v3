@@ -4,20 +4,11 @@ export interface RsvpPayload {
 }
 
 const RSVP_API_URL = import.meta.env.VITE_RSVP_API_URL ?? '/api/rsvp'
-const RSVP_SECRET = import.meta.env.VITE_RSVP_SECRET
 
 export async function submitRsvp({ fullName, guestCount }: RsvpPayload): Promise<void> {
-    const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-    }
-
-    if (RSVP_SECRET) {
-        headers['x-rsvp-secret'] = RSVP_SECRET
-    }
-
     const response = await fetch(RSVP_API_URL, {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fullName, guestCount }),
     })
 

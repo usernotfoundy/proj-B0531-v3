@@ -37,14 +37,6 @@ export default async function handler(req, res) {
         return res.status(405).json({ message: 'Method not allowed' })
     }
 
-    const expectedSecret = process.env.RSVP_SECRET
-    if (expectedSecret) {
-        const providedSecret = req.headers['x-rsvp-secret'] ?? req.body?.secret
-        if (providedSecret !== expectedSecret) {
-            return res.status(401).json({ error: 'Unauthorized' })
-        }
-    }
-
     const sheetId = process.env.GOOGLE_SHEET_ID
     if (!sheetId) {
         return res.status(500).json({ error: 'Google Sheet is not configured' })
