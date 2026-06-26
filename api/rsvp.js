@@ -32,6 +32,24 @@ function validatePayload(body) {
     return { fullName, guestCount }
 }
 
+function formatSheetsError(err) {
+    const message = err instanceof Error ? err.message : String(err)
+
+    if (message.includes('not found')) {
+        return 'Spreadsheet not found. Check GOOGLE_SHEET_ID in Vercel — use only the ID from the sheet URL, not the full link.'
+    }
+
+    if (message.includes('Unable to parse range') || message.includes('Grid')) {
+        return 'Sheet tab not found. Set GOOGLE_SHEET_TAB in Vercel to match the tab name at the bottom of your sheet (often Sheet1).'
+    }
+
+    if (message.includes('permission') || err?.code === 403) {
+        return 'Permission denied. Share the Google Sheet with your service account email as Editor.'
+    }
+
+    return message || 'Failed to save RSVP'
+}
+
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Method not allowed' })
@@ -48,7 +66,7 @@ export default async function handler(req, res) {
     }
 
     const { fullName, guestCount } = validation
-    const sheetTab = process.env.GOOGLE_SHEET_TAB || 'RSVP'
+    const sheetTab = process.env.GOOGLE_SHEET_TAB || 'Sheet1'
 
     try {
         const sheets = getSheetsClient()
@@ -71,7 +89,7 @@ export default async function handler(req, res) {
     } catch (err) {
         console.error('RSVP sheet append failed:', err)
         return res.status(500).json({
-            error: err instanceof Error ? err.message : 'Failed to save RSVP',
+            error: formatSheetsError(err),
         })
     }
 }
