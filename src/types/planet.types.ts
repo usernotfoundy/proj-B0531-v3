@@ -46,6 +46,13 @@ export interface PlanetButton {
     action?: string
 }
 
+export interface LocationCoordinate {
+    label: string
+    latitude: number
+    longitude: number
+    mapsUrl?: string
+}
+
 export interface PlanetConfig {
     id: string
     name: string
@@ -58,9 +65,8 @@ export interface PlanetConfig {
     description?: string
     button?: PlanetButton
     coordinates?: {
-        latitude: number
-        longitude: number
         description?: string
+        locations: LocationCoordinate[]
     }
     godparents?: GodparentsData
     healthProtocols?: HealthProtocolsData

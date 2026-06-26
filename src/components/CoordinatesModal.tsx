@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import type { LocationCoordinate } from '../types/planet.types'
 
 interface CoordinatesModalProps {
     isOpen: boolean
     onClose: () => void
     planetName: string
-    latitude: number
-    longitude: number
+    locations: LocationCoordinate[]
     description?: string
 }
 
@@ -43,13 +43,19 @@ function makeSvgIcon(html: string, size: [number, number], anchor: [number, numb
     return L.divIcon({ html, iconSize: size, iconAnchor: anchor, className: '' })
 }
 
-const TARGET_ICON = makeSvgIcon(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 40" width="32" height="40">
-        <path d="M12 0C5.37 0 0 5.37 0 12c0 7 12 26 12 26s12-19 12-26C24 5.37 18.63 0 12 0z" fill="#29657a"/>
-        <circle cx="12" cy="12" r="5" fill="#A0DAF1"/>
-    </svg>`,
-    [32, 40], [16, 40],
-)
+function makeTargetIcon(color: string, active: boolean) {
+    const scale = active ? 1 : 0.82
+    const opacity = active ? 1 : 0.72
+    return makeSvgIcon(
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 40" width="32" height="40" style="transform:scale(${scale});opacity:${opacity}">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 7 12 26 12 26s12-19 12-26C24 5.37 18.63 0 12 0z" fill="${color}"/>
+            <circle cx="12" cy="12" r="5" fill="#A0DAF1"/>
+        </svg>`,
+        [32, 40], [16, 40],
+    )
+}
+
+const PIN_COLORS = ['#29657a', '#d97706', '#7c3aed', '#dc2626']
 
 const USER_ICON = makeSvgIcon(
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="28" height="28">
@@ -71,12 +77,12 @@ export default function CoordinatesModal({
     isOpen,
     onClose,
     planetName,
-    latitude,
-    longitude,
+    locations,
     description = 'Coordinates',
 }: CoordinatesModalProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null)
     const mapRef = useRef<L.Map | null>(null)
+    const targetMarkersRef = useRef<L.Marker[]>([])
     const userMarkerRef = useRef<L.Marker | null>(null)
     const routeHaloRef = useRef<L.GeoJSON | null>(null)
     const routeLineRef = useRef<L.GeoJSON | null>(null)
@@ -84,6 +90,7 @@ export default function CoordinatesModal({
     const lastRouteFetchRef = useRef<{ lat: number; lng: number } | null>(null)
     const hasFittedRef = useRef(false)
 
+    const [activeIndex, setActiveIndex] = useState(0)
     const [geoState, setGeoState] = useState<GeoState>('idle')
     const [geoError, setGeoError] = useState<string | null>(null)
     const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null)
@@ -93,24 +100,49 @@ export default function CoordinatesModal({
     const [routeDistance, setRouteDistance] = useState<string | null>(null)
     const [routeDuration, setRouteDuration] = useState<string | null>(null)
 
+    const activeLocation = locations[activeIndex] ?? locations[0]
+    const { latitude, longitude } = activeLocation ?? { latitude: 0, longitude: 0 }
+
+    const selectLocation = useCallback((index: number) => {
+        setActiveIndex(index)
+        lastRouteFetchRef.current = null
+        hasFittedRef.current = false
+        setRouteState('idle')
+        setRouteDistance(null)
+        setRouteDuration(null)
+        routeHaloRef.current?.remove()
+        routeLineRef.current?.remove()
+        routeHaloRef.current = null
+        routeLineRef.current = null
+    }, [])
+
     // ── 1. Map init ───────────────────────────────────────────────────────────
     useEffect(() => {
-        if (isOpen && mapContainerRef.current && !mapRef.current) {
-            const map = L.map(mapContainerRef.current).setView([latitude, longitude], 13)
+        if (isOpen && mapContainerRef.current && !mapRef.current && locations.length > 0) {
+            const bounds = L.latLngBounds(locations.map((loc) => [loc.latitude, loc.longitude]))
+            const map = L.map(mapContainerRef.current).fitBounds(bounds, { padding: [48, 48], maxZoom: 15 })
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors',
                 maxZoom: 19,
             }).addTo(map)
 
-            L.marker([latitude, longitude], { icon: TARGET_ICON })
-                .addTo(map)
-                .bindPopup(
-                    `<div style="text-align:center;font-weight:bold;color:#29657a;">
-                        ${planetName}<br/>${description}<br/>
-                        ${latitude.toFixed(6)}, ${longitude.toFixed(6)}
-                    </div>`
-                )
+            targetMarkersRef.current = locations.map((loc, index) => {
+                const color = PIN_COLORS[index % PIN_COLORS.length]
+                const marker = L.marker([loc.latitude, loc.longitude], {
+                    icon: makeTargetIcon(color, index === activeIndex),
+                })
+                    .addTo(map)
+                    .bindPopup(
+                        `<div style="text-align:center;font-weight:bold;color:${color};">
+                            ${loc.label}<br/>
+                            ${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}
+                        </div>`
+                    )
+
+                marker.on('click', () => selectLocation(index))
+                return marker
+            })
 
             mapRef.current = map
             setTimeout(() => map.invalidateSize(), 100)
@@ -120,15 +152,25 @@ export default function CoordinatesModal({
             if (!isOpen && mapRef.current) {
                 mapRef.current.remove()
                 mapRef.current = null
+                targetMarkersRef.current = []
                 userMarkerRef.current = null
                 routeHaloRef.current = null
                 routeLineRef.current = null
                 hasFittedRef.current = false
             }
         }
-    }, [isOpen, latitude, longitude, planetName, description])
+    }, [isOpen, locations, selectLocation])
 
-    // ── 2. Route fetcher (stable ref via useCallback) ─────────────────────────
+    // ── 1b. Update marker icons on active pin change ─────────────────────────
+    useEffect(() => {
+        targetMarkersRef.current.forEach((marker, index) => {
+            const color = PIN_COLORS[index % PIN_COLORS.length]
+            marker.setIcon(makeTargetIcon(color, index === activeIndex))
+            if (index === activeIndex) marker.openPopup()
+        })
+    }, [activeIndex, locations.length])
+
+    // ── 2. Route fetcher ──────────────────────────────────────────────────────
     const fetchRoute = useCallback(async (uLat: number, uLng: number) => {
         const map = mapRef.current
         if (!map) return
@@ -163,7 +205,9 @@ export default function CoordinatesModal({
             }).addTo(map)
 
             if (!hasFittedRef.current) {
-                map.fitBounds(routeLineRef.current.getBounds(), { padding: [48, 48] })
+                const routeBounds = routeLineRef.current.getBounds()
+                if (userMarkerRef.current) routeBounds.extend(userMarkerRef.current.getLatLng())
+                map.fitBounds(routeBounds, { padding: [48, 48] })
                 hasFittedRef.current = true
             }
         } catch {
@@ -180,8 +224,7 @@ export default function CoordinatesModal({
         }
     }, [latitude, longitude])
 
-    // ── 3. watchPosition — only updates state, nothing else ───────────────────
-    //    Decoupled from map so there's no race condition on mobile.
+    // ── 3. watchPosition ──────────────────────────────────────────────────────
     useEffect(() => {
         if (!isOpen) return
 
@@ -207,7 +250,6 @@ export default function CoordinatesModal({
                         : 'Unable to retrieve your location.'
                 )
             },
-            // maximumAge:0 forces a fresh fix on mobile — no stale cached position
             { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
         )
 
@@ -219,7 +261,7 @@ export default function CoordinatesModal({
         }
     }, [isOpen])
 
-    // ── 4. React to userCoords changes — map is guaranteed ready here ─────────
+    // ── 4. React to userCoords / active target changes ────────────────────────
     useEffect(() => {
         if (!userCoords) return
 
@@ -229,7 +271,6 @@ export default function CoordinatesModal({
         const map = mapRef.current
         if (!map) return
 
-        // Move or place user marker
         if (userMarkerRef.current) {
             userMarkerRef.current.setLatLng([uLat, uLng])
         } else {
@@ -242,7 +283,6 @@ export default function CoordinatesModal({
                 )
         }
 
-        // Re-fetch route only if moved past threshold
         const last = lastRouteFetchRef.current
         const movedEnough =
             !last || haversineMeters(last.lat, last.lng, uLat, uLng) > ROUTE_REFETCH_THRESHOLD_M
@@ -254,6 +294,7 @@ export default function CoordinatesModal({
     // ── 5. Reset on close ─────────────────────────────────────────────────────
     useEffect(() => {
         if (!isOpen) {
+            setActiveIndex(0)
             setGeoState('idle')
             setGeoError(null)
             setUserCoords(null)
@@ -265,9 +306,10 @@ export default function CoordinatesModal({
         }
     }, [isOpen])
 
-    if (!isOpen) return null
+    if (!isOpen || !activeLocation) return null
 
     const displayDistance = routeDistance ?? straightDist
+    const activeColor = PIN_COLORS[activeIndex % PIN_COLORS.length]
 
     return (
         <div
@@ -278,7 +320,6 @@ export default function CoordinatesModal({
                 style={{ background: 'linear-gradient(135deg, rgba(167,216,245,0.1) 0%, rgba(137,194,217,0.05) 100%)', border: '1px solid rgba(167,216,245,0.25)', borderRadius: '4px', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(167,216,245,0.15)', width: '92vw', maxWidth: '1400px', height: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', pointerEvents: 'auto' }}
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Top accent */}
                 <div style={{ height: '2px', background: 'linear-gradient(to right, #A7D8F5, #89C2D9, transparent)' }} />
 
                 {/* ── Header ────────────────────────────────────────────── */}
@@ -293,7 +334,6 @@ export default function CoordinatesModal({
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
-                        {/* Live badge */}
                         {geoState === 'success' && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                 <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 6px #4ade80', animation: 'pulse 2s infinite' }} />
@@ -301,7 +341,6 @@ export default function CoordinatesModal({
                             </div>
                         )}
 
-                        {/* Status messages */}
                         {geoState === 'loading' && (
                             <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.7rem', color: '#A7D8F5', letterSpacing: '0.08em', opacity: 0.8 }}>⟳ Locating…</span>
                         )}
@@ -315,7 +354,6 @@ export default function CoordinatesModal({
                             <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.65rem', color: '#fcd34d', letterSpacing: '0.03em' }}>⚠ Straight-line only</span>
                         )}
 
-                        {/* Close */}
                         <button
                             onClick={onClose}
                             style={{ background: 'rgba(167,216,245,0.08)', border: '1px solid rgba(167,216,245,0.25)', borderRadius: '2px', color: '#A7D8F5', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold', transition: 'all 0.3s ease', flexShrink: 0 }}
@@ -327,20 +365,67 @@ export default function CoordinatesModal({
                     </div>
                 </div>
 
+                {/* ── Pin selector ──────────────────────────────────────── */}
+                {locations.length > 1 && (
+                    <div style={{ padding: '0.65rem 1.25rem', borderBottom: '1px solid rgba(167,216,245,0.1)', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', background: 'rgba(167,216,245,0.03)' }}>
+                        {locations.map((loc, index) => {
+                            const color = PIN_COLORS[index % PIN_COLORS.length]
+                            const isActive = index === activeIndex
+                            return (
+                                <button
+                                    key={loc.label}
+                                    onClick={() => selectLocation(index)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.45rem',
+                                        padding: '0.45rem 0.75rem',
+                                        fontFamily: "'Orbitron', sans-serif",
+                                        fontSize: '0.58rem',
+                                        letterSpacing: '0.12em',
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        color: isActive ? '#F4FAFF' : 'rgba(205,239,253,0.65)',
+                                        background: isActive ? `${color}33` : 'rgba(167,216,245,0.05)',
+                                        border: `1px solid ${isActive ? color : 'rgba(167,216,245,0.2)'}`,
+                                        borderRadius: '2px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.25s ease',
+                                        boxShadow: isActive ? `0 0 12px ${color}44` : 'none',
+                                    }}
+                                >
+                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, boxShadow: isActive ? `0 0 6px ${color}` : 'none', flexShrink: 0 }} />
+                                    {loc.label}
+                                </button>
+                            )
+                        })}
+                    </div>
+                )}
+
                 {/* ── Map ───────────────────────────────────────────────── */}
                 <div ref={mapContainerRef} style={{ flex: 1, overflow: 'hidden', position: 'relative', borderBottom: '1px solid rgba(167,216,245,0.12)', minHeight: 0 }} />
 
                 {/* ── Footer ────────────────────────────────────────────── */}
                 <div style={{ padding: '0.75rem 1.25rem', background: 'linear-gradient(to top, rgba(137,194,217,0.05), rgba(167,216,245,0.03))', borderTop: '1px solid rgba(167,216,245,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {/* Target */}
                     <div>
-                        <p style={{ fontFamily: "'Orbitron', sans-serif", fontSize: '0.6rem', letterSpacing: '0.12em', color: '#89C2D9', textTransform: 'uppercase', margin: 0, marginBottom: '0.3rem' }}>Target</p>
+                        <p style={{ fontFamily: "'Orbitron', sans-serif", fontSize: '0.6rem', letterSpacing: '0.12em', color: activeColor, textTransform: 'uppercase', margin: 0, marginBottom: '0.3rem' }}>
+                            {activeLocation.label}
+                        </p>
                         <p style={{ fontFamily: "'Syne', sans-serif", fontSize: 'clamp(0.7rem, 2vw, 0.85rem)', fontWeight: 700, color: '#F4FAFF', margin: 0 }}>
                             {latitude.toFixed(6)} N, {longitude.toFixed(6)} E
                         </p>
+                        {activeLocation.mapsUrl && (
+                            <a
+                                href={activeLocation.mapsUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.62rem', color: '#A7D8F5', letterSpacing: '0.05em', marginTop: '0.25rem', display: 'inline-block', textDecoration: 'none', opacity: 0.85 }}
+                            >
+                                Open in Google Maps ↗
+                            </a>
+                        )}
                     </div>
 
-                    {/* Distance + duration */}
                     {geoState === 'success' && displayDistance && (
                         <div style={{ textAlign: 'center' }}>
                             <p style={{ fontFamily: "'Orbitron', sans-serif", fontSize: '0.6rem', letterSpacing: '0.12em', color: '#4ade80', textTransform: 'uppercase', margin: 0, marginBottom: '0.3rem' }}>
@@ -355,7 +440,6 @@ export default function CoordinatesModal({
                         </div>
                     )}
 
-                    {/* Your position */}
                     {geoState === 'success' && userCoords ? (
                         <div style={{ textAlign: 'right' }}>
                             <p style={{ fontFamily: "'Orbitron', sans-serif", fontSize: '0.6rem', letterSpacing: '0.12em', color: '#4ade80', textTransform: 'uppercase', margin: 0, marginBottom: '0.3rem' }}>Your Position</p>
@@ -372,7 +456,6 @@ export default function CoordinatesModal({
                     )}
                 </div>
 
-                {/* Bottom accent */}
                 <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(167,216,245,0.15))' }} />
 
                 <style>{`

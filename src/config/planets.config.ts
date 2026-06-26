@@ -33,9 +33,21 @@ export const PLANETS: PlanetConfig[] = [
         ],
         button: { label: 'VIEW COORDINATES' },
         coordinates: {
-            latitude: 18.19656744417731,
-            longitude: 120.59310380958682,
-            description: 'Mission Launch Coordinates'
+            description: 'Mission Launch Coordinates',
+            locations: [
+                {
+                    label: 'Christening',
+                    latitude: 17.9262135,
+                    longitude: 120.4757704,
+                    mapsUrl: 'https://maps.app.goo.gl/MVE85qU9qumbE8VG6',
+                },
+                {
+                    label: 'Venue',
+                    latitude: 17.929862,
+                    longitude: 120.4736457,
+                    mapsUrl: 'https://maps.app.goo.gl/9CLv34U14kghzSAy6',
+                },
+            ],
         }
     },
     {

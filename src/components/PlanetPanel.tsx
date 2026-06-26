@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { PLANETS } from '../config/planets.config'
 import { useHUD } from '../hooks/useHUD'
-import type { GodparentsData, HealthProtocolsData, PhotoGalleryData } from '../types/planet.types'
+import type { GodparentsData, HealthProtocolsData, LocationCoordinate, PhotoGalleryData } from '../types/planet.types'
 
 interface CoordinatesData {
-  latitude: number
-  longitude: number
   planetName: string
   description?: string
+  locations: LocationCoordinate[]
 }
 
 interface GodparentsModalData {
@@ -248,10 +247,9 @@ export default function PlanetPanel({ onShowCoordinates, onShowGodparents, onSho
                             onClick={() => {
                                 if (planet.coordinates && onShowCoordinates) {
                                     onShowCoordinates({
-                                        latitude: planet.coordinates.latitude,
-                                        longitude: planet.coordinates.longitude,
                                         planetName: planet.name,
                                         description: planet.coordinates.description,
+                                        locations: planet.coordinates.locations,
                                     })
                                 } else if (planet.godparents && onShowGodparents) {
                                     onShowGodparents({

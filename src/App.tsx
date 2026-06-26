@@ -3,7 +3,7 @@ import SpaceCanvas from './components/SpaceCanvas'
 import SplashScreen from './components/SplashScreen'
 import ScrollContainer from './components/ScrollContainer'
 import { useSpaceScene } from './hooks/useSpaceScene'
-import type { GodparentsData, HealthProtocolsData, PhotoGalleryData } from './types/planet.types'
+import type { GodparentsData, HealthProtocolsData, LocationCoordinate, PhotoGalleryData } from './types/planet.types'
 
 const HUD = lazy(() => import('./components/HUD'))
 const PlanetPanel = lazy(() => import('./components/PlanetPanel'))
@@ -13,10 +13,9 @@ const HealthProtocolsModal = lazy(() => import('./components/HealthProtocolsModa
 const PhotoGalleryModal = lazy(() => import('./components/PhotoGalleryModal'))
 
 interface CoordinatesData {
-  latitude: number
-  longitude: number
   planetName: string
   description?: string
+  locations: LocationCoordinate[]
 }
 
 interface GodparentsModalData {
@@ -77,9 +76,8 @@ export default function App() {
             isOpen={!!coordinatesModal}
             onClose={() => setCoordinatesModal(null)}
             planetName={coordinatesModal.planetName}
-            latitude={coordinatesModal.latitude}
-            longitude={coordinatesModal.longitude}
             description={coordinatesModal.description}
+            locations={coordinatesModal.locations}
           />
         </Suspense>
       )}
