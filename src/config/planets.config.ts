@@ -87,7 +87,7 @@ export const PLANETS: PlanetConfig[] = [
     },
     {
         id: 'uranus',
-        name: 'PHOTO GALLERY',
+        name: 'The Archive',
         modelPath: '/models/uranus.glb',
         position: [-20, 10, -540],
         displaySize: 25,

@@ -6,7 +6,7 @@ import type { PhotoGalleryData } from '../types/planet.types'
 
 export const BABY_PHOTO_GALLERY: PhotoGalleryData = {
     eyebrow: 'Our Stories',
-    title: 'Photo Gallery',
+    title: 'The Archive',
     subtitle: 'Captured moments from Xyz\'s first trip around the sun.',
     photos: [
         { src: 'https://i.pinimg.com/1200x/99/f6/a9/99f6a901d797e3ea57ef049cef096dc4.jpg', alt: 'Tiny toes', colSpan: 4, rowSpan: 3 },
