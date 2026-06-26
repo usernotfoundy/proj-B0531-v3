@@ -41,6 +41,11 @@ export interface PhotoGalleryData {
     photos: BabyPhoto[]
 }
 
+export interface InvitationData {
+    title: string
+    subtitle: string
+}
+
 export interface PlanetButton {
     label: string
     action?: string
@@ -71,6 +76,7 @@ export interface PlanetConfig {
     godparents?: GodparentsData
     healthProtocols?: HealthProtocolsData
     photoGallery?: PhotoGalleryData
+    invitation?: InvitationData
 }
 
 export interface CameraWaypoint {

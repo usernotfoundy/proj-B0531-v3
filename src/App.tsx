@@ -3,7 +3,7 @@ import SpaceCanvas from './components/SpaceCanvas'
 import SplashScreen from './components/SplashScreen'
 import ScrollContainer from './components/ScrollContainer'
 import { useSpaceScene } from './hooks/useSpaceScene'
-import type { GodparentsData, HealthProtocolsData, LocationCoordinate, PhotoGalleryData } from './types/planet.types'
+import type { GodparentsData, HealthProtocolsData, InvitationData, LocationCoordinate, PhotoGalleryData } from './types/planet.types'
 
 const HUD = lazy(() => import('./components/HUD'))
 const PlanetPanel = lazy(() => import('./components/PlanetPanel'))
@@ -11,6 +11,7 @@ const CoordinatesModal = lazy(() => import('./components/CoordinatesModal'))
 const GodparentsModal = lazy(() => import('./components/GodparentsModal'))
 const HealthProtocolsModal = lazy(() => import('./components/HealthProtocolsModal'))
 const PhotoGalleryModal = lazy(() => import('./components/PhotoGalleryModal'))
+const InvitationModal = lazy(() => import('./components/InvitationModal'))
 
 interface CoordinatesData {
   planetName: string
@@ -34,6 +35,11 @@ interface PhotoGalleryModalData {
   photoGallery: PhotoGalleryData
 }
 
+interface InvitationModalData {
+  planetName: string
+  invitation: InvitationData
+}
+
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { spaceshipRef } = useSpaceScene(canvasRef)
@@ -42,6 +48,7 @@ export default function App() {
   const [godparentsModal, setGodparentsModal] = useState<GodparentsModalData | null>(null)
   const [healthProtocolsModal, setHealthProtocolsModal] = useState<HealthProtocolsModalData | null>(null)
   const [photoGalleryModal, setPhotoGalleryModal] = useState<PhotoGalleryModalData | null>(null)
+  const [invitationModal, setInvitationModal] = useState<InvitationModalData | null>(null)
 
   return (
     <>
@@ -66,6 +73,7 @@ export default function App() {
             onShowGodparents={setGodparentsModal}
             onShowHealthProtocols={setHealthProtocolsModal}
             onShowPhotoGallery={setPhotoGalleryModal}
+            onShowInvitation={setInvitationModal}
           />
         </Suspense>
       )}
@@ -109,6 +117,16 @@ export default function App() {
             onClose={() => setPhotoGalleryModal(null)}
             planetName={photoGalleryModal.planetName}
             photoGallery={photoGalleryModal.photoGallery}
+          />
+        </Suspense>
+      )}
+      {invitationModal && (
+        <Suspense fallback={null}>
+          <InvitationModal
+            isOpen={!!invitationModal}
+            onClose={() => setInvitationModal(null)}
+            planetName={invitationModal.planetName}
+            invitation={invitationModal.invitation}
           />
         </Suspense>
       )}

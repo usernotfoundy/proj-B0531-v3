@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { PLANETS } from '../config/planets.config'
 import { useHUD } from '../hooks/useHUD'
-import type { GodparentsData, HealthProtocolsData, LocationCoordinate, PhotoGalleryData } from '../types/planet.types'
+import type { GodparentsData, HealthProtocolsData, InvitationData, LocationCoordinate, PhotoGalleryData } from '../types/planet.types'
 
 interface CoordinatesData {
   planetName: string
@@ -25,14 +25,20 @@ interface PhotoGalleryModalData {
   photoGallery: PhotoGalleryData
 }
 
+interface InvitationModalData {
+  planetName: string
+  invitation: InvitationData
+}
+
 interface PlanetPanelProps {
   onShowCoordinates?: (data: CoordinatesData) => void
   onShowGodparents?: (data: GodparentsModalData) => void
   onShowHealthProtocols?: (data: HealthProtocolsModalData) => void
   onShowPhotoGallery?: (data: PhotoGalleryModalData) => void
+  onShowInvitation?: (data: InvitationModalData) => void
 }
 
-export default function PlanetPanel({ onShowCoordinates, onShowGodparents, onShowHealthProtocols, onShowPhotoGallery }: PlanetPanelProps) {
+export default function PlanetPanel({ onShowCoordinates, onShowGodparents, onShowHealthProtocols, onShowPhotoGallery, onShowInvitation }: PlanetPanelProps) {
     const { activePlanetIndex, planetProgress } = useHUD()
     // const planet = PLANETS[activePlanetIndex]
 
@@ -266,6 +272,11 @@ export default function PlanetPanel({ onShowCoordinates, onShowGodparents, onSho
                                     onShowPhotoGallery({
                                         planetName: planet.name,
                                         photoGallery: planet.photoGallery,
+                                    })
+                                } else if (planet.invitation && onShowInvitation) {
+                                    onShowInvitation({
+                                        planetName: planet.name,
+                                        invitation: planet.invitation,
                                     })
                                 }
                             }}

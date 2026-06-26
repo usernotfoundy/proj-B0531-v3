@@ -2,6 +2,7 @@ import type { PlanetConfig } from '../types/planet.types'
 import { BABY_PHOTO_GALLERY } from './babyPhotos.config'
 import { GODPARENTS } from './godparents.config'
 import { HEALTH_PROTOCOLS } from './healthProtocols.config'
+import { INVITATION } from './invitation.config'
 
 export const PLANETS: PlanetConfig[] = [
     {
@@ -104,20 +105,13 @@ export const PLANETS: PlanetConfig[] = [
     },
     {
         id: 'neptune',
-        name: 'Neptune',
+        name: 'INVITATION',
         modelPath: '/models/neptune.glb',
         position: [25, -10, -680],
         displaySize: 25,
         rotationSpeed: 0.0012,
-        description: 'The windswept frontier. Neptune hosts the fastest winds in the solar system, reaching 2,100 km/h.',
-        // button: { label: 'ANALYZE' },
-        facts: [
-            { label: 'Diameter', value: '49,244', unit: 'km' },
-            { label: 'Distance to Sun', value: '4,495', unit: 'mil km' },
-            { label: 'Day Length', value: '16.1', unit: 'hours' },
-            { label: 'Moons', value: '16' },
-            { label: 'Surface Temp', value: '-200', unit: '°C avg' },
-            { label: 'Gravity', value: '11.2', unit: 'm/s²' },
-        ],
+        description: INVITATION.subtitle,
+        invitation: INVITATION,
+        button: { label: 'RSVP' },
     },
 ]
