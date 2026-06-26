@@ -1,5 +1,6 @@
-import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import type { InvitationData } from '../types/planet.types'
+import { submitRsvp } from '../lib/submitRsvp'
 
 interface InvitationModalProps {
     isOpen: boolean
@@ -40,6 +41,8 @@ export default function InvitationModal({
     const [fullName, setFullName] = useState('')
     const [guestCount, setGuestCount] = useState(1)
     const [submitPhase, setSubmitPhase] = useState<'form' | 'submitting' | 'success'>('form')
+    const [submitError, setSubmitError] = useState<string | null>(null)
+    const submitRequestRef = useRef(0)
 
     const MIN_GUESTS = 1
     const MAX_GUESTS = 20
@@ -60,22 +63,41 @@ export default function InvitationModal({
             setFullName('')
             setGuestCount(1)
             setSubmitPhase('form')
+            setSubmitError(null)
         }
     }, [isOpen])
 
     useEffect(() => {
         if (submitPhase !== 'submitting') return
 
-        const timer = window.setTimeout(() => {
-            setSubmitPhase('success')
-        }, 1800)
+        const requestId = ++submitRequestRef.current
+        const trimmedName = fullName.trim()
 
-        return () => window.clearTimeout(timer)
-    }, [submitPhase])
+        const runSubmit = async () => {
+            const minDelay = new Promise((resolve) => window.setTimeout(resolve, 1800))
+
+            try {
+                await Promise.all([
+                    minDelay,
+                    submitRsvp({ fullName: trimmedName, guestCount }),
+                ])
+
+                if (requestId !== submitRequestRef.current) return
+                setSubmitPhase('success')
+            } catch (err) {
+                if (requestId !== submitRequestRef.current) return
+                setSubmitError(err instanceof Error ? err.message : 'Failed to submit RSVP. Please try again.')
+                setSubmitPhase('form')
+            }
+        }
+
+        void runSubmit()
+    }, [submitPhase, fullName, guestCount])
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault()
         if (!fullName.trim() || submitPhase !== 'form') return
+        setSubmitError(null)
         setSubmitPhase('submitting')
     }
 
@@ -310,6 +332,21 @@ export default function InvitationModal({
                             </p>
 
                             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                {submitError && (
+                                    <p style={{
+                                        fontFamily: "'Syne', sans-serif",
+                                        fontSize: '0.75rem',
+                                        lineHeight: 1.6,
+                                        color: '#fca5a5',
+                                        margin: 0,
+                                        padding: '0.65rem 0.75rem',
+                                        border: '1px solid rgba(252,165,165,0.35)',
+                                        background: 'rgba(252,165,165,0.08)',
+                                        borderRadius: '2px',
+                                    }}>
+                                        {submitError}
+                                    </p>
+                                )}
                                 <div>
                                     <label htmlFor="invitation-full-name" style={labelStyle}>
                                         Full Name
