@@ -1,6 +1,13 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import {
+    useCallback,
+    useEffect,
+    useLayoutEffect,
+    useRef,
+    useState,
+    type CSSProperties,
+} from 'react'
 import gsap from 'gsap'
-import type { PhotoGalleryData } from '../types/planet.types'
+import type { BabyPhoto, PhotoGalleryData } from '../types/planet.types'
 
 interface PhotoGalleryModalProps {
     isOpen: boolean
@@ -10,6 +17,7 @@ interface PhotoGalleryModalProps {
 }
 
 const TAB_COLORS = ['#89C2D9', '#E8A0BF']
+const SWIPE_THRESHOLD_RATIO = 0.18
 
 const closeBtnStyle: CSSProperties = {
     background: 'rgba(167,216,245,0.08)',
@@ -28,6 +36,10 @@ const closeBtnStyle: CSSProperties = {
     flexShrink: 0,
 }
 
+function wrapIndex(index: number, length: number) {
+    return (index + length) % length
+}
+
 export default function PhotoGalleryModal({
     isOpen,
     onClose,
@@ -37,13 +49,72 @@ export default function PhotoGalleryModal({
     const [activeTabIndex, setActiveTabIndex] = useState(0)
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
     const expandedRef = useRef<HTMLDivElement>(null)
+    const viewportRef = useRef<HTMLDivElement>(null)
+    const trackRef = useRef<HTMLDivElement>(null)
     const wasExpandedRef = useRef(false)
     const slideDirRef = useRef(0)
+    const swipeHandledRef = useRef(false)
+    const skipSlideAnimRef = useRef(false)
+    const [showSwipeHint, setShowSwipeHint] = useState(false)
 
     const activeTab = photoGallery.tabs[activeTabIndex] ?? photoGallery.tabs[0]
     const activePhotos = activeTab?.photos ?? []
     const isExpanded = selectedIndex !== null
     const selectedPhoto = selectedIndex !== null ? activePhotos[selectedIndex] : null
+    const hasMultiplePhotos = activePhotos.length > 1
+
+    const getCenterOffset = useCallback(() => {
+        return -(viewportRef.current?.clientWidth ?? 0)
+    }, [])
+
+    const resetTrackPosition = useCallback(() => {
+        gsap.set(trackRef.current, { x: getCenterOffset() })
+    }, [getCenterOffset])
+
+    const animateTrackTo = useCallback(
+        (targetX: number, onComplete?: () => void) => {
+            gsap.to(trackRef.current, {
+                x: targetX,
+                duration: 0.32,
+                ease: 'power2.out',
+                onComplete,
+            })
+        },
+        [],
+    )
+
+    const goPrev = useCallback(() => {
+        slideDirRef.current = -1
+        setSelectedIndex((i) =>
+            i === null ? null : wrapIndex(i - 1, activePhotos.length),
+        )
+    }, [activePhotos.length])
+
+    const goNext = useCallback(() => {
+        slideDirRef.current = 1
+        setSelectedIndex((i) =>
+            i === null ? null : wrapIndex(i + 1, activePhotos.length),
+        )
+    }, [activePhotos.length])
+
+    const dismissSwipeHint = useCallback(() => setShowSwipeHint(false), [])
+
+    const commitSwipe = useCallback(
+        (direction: -1 | 1) => {
+            if (selectedIndex === null) return
+            const width = viewportRef.current?.clientWidth ?? 0
+            const center = -width
+            skipSlideAnimRef.current = true
+            swipeHandledRef.current = true
+            setShowSwipeHint(false)
+
+            animateTrackTo(center - direction * width, () => {
+                slideDirRef.current = direction
+                setSelectedIndex(wrapIndex(selectedIndex + direction, activePhotos.length))
+            })
+        },
+        [activePhotos.length, animateTrackTo, selectedIndex],
+    )
 
     const selectTab = useCallback((index: number) => {
         setActiveTabIndex(index)
@@ -56,8 +127,108 @@ export default function PhotoGalleryModal({
             setActiveTabIndex(0)
             setSelectedIndex(null)
             wasExpandedRef.current = false
+            setShowSwipeHint(false)
         }
     }, [isOpen])
+
+    useEffect(() => {
+        if (selectedIndex === null || !hasMultiplePhotos) {
+            setShowSwipeHint(false)
+            return
+        }
+
+        const isMobile = window.matchMedia('(max-width: 640px)').matches
+        if (!isMobile) {
+            setShowSwipeHint(false)
+            return
+        }
+
+        setShowSwipeHint(true)
+        const timer = window.setTimeout(() => setShowSwipeHint(false), 6000)
+        return () => window.clearTimeout(timer)
+    }, [selectedIndex, hasMultiplePhotos, activeTabIndex])
+
+    useEffect(() => {
+        const viewport = viewportRef.current
+        if (!viewport || selectedIndex === null || !hasMultiplePhotos) return
+
+        let startX = 0
+        let startY = 0
+        let dragging = false
+
+        const onStart = (e: TouchEvent) => {
+            startX = e.touches[0].clientX
+            startY = e.touches[0].clientY
+            dragging = false
+            swipeHandledRef.current = false
+            gsap.killTweensOf(trackRef.current)
+        }
+
+        const onMove = (e: TouchEvent) => {
+            const dx = e.touches[0].clientX - startX
+            const dy = e.touches[0].clientY - startY
+
+            if (!dragging) {
+                if (Math.abs(dx) < 8 || Math.abs(dx) <= Math.abs(dy)) return
+                dragging = true
+                dismissSwipeHint()
+            }
+
+            e.preventDefault()
+            gsap.set(trackRef.current, { x: getCenterOffset() + dx })
+        }
+
+        const onEnd = (e: TouchEvent) => {
+            if (!dragging) return
+
+            const dx = e.changedTouches[0].clientX - startX
+            const width = viewport.clientWidth
+            const threshold = width * SWIPE_THRESHOLD_RATIO
+            const center = getCenterOffset()
+
+            if (dx < -threshold) {
+                commitSwipe(1)
+            } else if (dx > threshold) {
+                commitSwipe(-1)
+            } else {
+                animateTrackTo(center)
+            }
+
+            dragging = false
+        }
+
+        viewport.addEventListener('touchstart', onStart, { passive: true })
+        viewport.addEventListener('touchmove', onMove, { passive: false })
+        viewport.addEventListener('touchend', onEnd, { passive: true })
+        viewport.addEventListener('touchcancel', onEnd, { passive: true })
+
+        return () => {
+            viewport.removeEventListener('touchstart', onStart)
+            viewport.removeEventListener('touchmove', onMove)
+            viewport.removeEventListener('touchend', onEnd)
+            viewport.removeEventListener('touchcancel', onEnd)
+        }
+    }, [
+        selectedIndex,
+        hasMultiplePhotos,
+        activeTabIndex,
+        getCenterOffset,
+        animateTrackTo,
+        commitSwipe,
+        dismissSwipeHint,
+    ])
+
+    useLayoutEffect(() => {
+        if (selectedIndex === null || !hasMultiplePhotos) return
+
+        if (skipSlideAnimRef.current) {
+            skipSlideAnimRef.current = false
+            resetTrackPosition()
+            return
+        }
+
+        resetTrackPosition()
+    }, [selectedIndex, activeTabIndex, hasMultiplePhotos, resetTrackPosition])
 
     useLayoutEffect(() => {
         if (selectedIndex === null) {
@@ -69,19 +240,19 @@ export default function PhotoGalleryModal({
         if (!root) return
 
         const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-        const img = root.querySelector<HTMLElement>('.photo-gallery-expanded-img')
         const toolbar = root.querySelector<HTMLElement>('.photo-gallery-expanded-toolbar')
+        const viewport = root.querySelector<HTMLElement>('.photo-gallery-swipe-viewport')
+        const hint = root.querySelector<HTMLElement>('.photo-gallery-swipe-hint')
         const caption = root.querySelector<HTMLElement>('.photo-gallery-expanded-caption')
         const prevBtn = root.querySelector<HTMLElement>('.photo-gallery-expanded-nav--prev')
         const nextBtn = root.querySelector<HTMLElement>('.photo-gallery-expanded-nav--next')
 
-        if (!img) return
-
         if (reducedMotion) {
-            gsap.set([root, toolbar, img, caption, prevBtn, nextBtn].filter(Boolean), {
+            gsap.set([root, toolbar, viewport, hint, caption, prevBtn, nextBtn].filter(Boolean), {
                 clearProps: 'all',
                 opacity: 1,
             })
+            resetTrackPosition()
             return
         }
 
@@ -90,22 +261,25 @@ export default function PhotoGalleryModal({
             const tl = gsap.timeline({ defaults: { ease: 'power3.out' } })
             tl.from(root, { opacity: 0, duration: 0.28 })
             if (toolbar) tl.from(toolbar, { y: -18, opacity: 0, duration: 0.38 }, 0.06)
-            tl.from(img, { scale: 0.82, opacity: 0, duration: 0.55 }, 0.1)
-            if (caption) tl.from(caption, { y: 10, opacity: 0, duration: 0.32 }, 0.22)
+            if (viewport) tl.from(viewport, { scale: 0.92, opacity: 0, duration: 0.5 }, 0.1)
+            if (hint) tl.from(hint, { y: 8, opacity: 0, duration: 0.28 }, 0.2)
+            if (caption) tl.from(caption, { y: 8, opacity: 0, duration: 0.28 }, 0.22)
             if (prevBtn) tl.from(prevBtn, { opacity: 0, duration: 0.28 }, 0.18)
             if (nextBtn) tl.from(nextBtn, { opacity: 0, duration: 0.28 }, 0.18)
-        } else {
-            const dir = slideDirRef.current
-            gsap.fromTo(
-                img,
-                { opacity: 0, scale: 0.94, x: dir * 36 },
-                { opacity: 1, scale: 1, x: 0, duration: 0.38, ease: 'power2.out' },
-            )
-            if (caption) {
-                gsap.fromTo(caption, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.28, ease: 'power2.out' })
-            }
+            return
         }
-    }, [selectedIndex, activeTabIndex])
+
+        if (skipSlideAnimRef.current || !hasMultiplePhotos) return
+
+        const width = viewportRef.current?.clientWidth ?? 0
+        const center = -width
+        const dir = slideDirRef.current
+        gsap.fromTo(
+            trackRef.current,
+            { x: center - dir * 40 },
+            { x: center, duration: 0.34, ease: 'power2.out' },
+        )
+    }, [selectedIndex, activeTabIndex, hasMultiplePhotos, resetTrackPosition])
 
     useEffect(() => {
         if (!isOpen) return
@@ -124,11 +298,11 @@ export default function PhotoGalleryModal({
 
             if (e.key === 'ArrowRight') {
                 slideDirRef.current = 1
-                setSelectedIndex((i) => (i === null ? 0 : (i + 1) % activePhotos.length))
+                setSelectedIndex((i) => (i === null ? 0 : wrapIndex(i + 1, activePhotos.length)))
             } else if (e.key === 'ArrowLeft') {
                 slideDirRef.current = -1
                 setSelectedIndex((i) =>
-                    i === null ? 0 : (i - 1 + activePhotos.length) % activePhotos.length,
+                    i === null ? 0 : wrapIndex(i - 1, activePhotos.length),
                 )
             }
         }
@@ -137,19 +311,15 @@ export default function PhotoGalleryModal({
         return () => document.removeEventListener('keydown', onKeyDown)
     }, [isOpen, onClose, selectedIndex, activePhotos.length])
 
+    const handleStageClick = useCallback(() => {
+        if (swipeHandledRef.current) {
+            swipeHandledRef.current = false
+            return
+        }
+        setSelectedIndex(null)
+    }, [])
+
     if (!isOpen || !activeTab) return null
-
-    const goPrev = () => {
-        if (selectedIndex === null) return
-        slideDirRef.current = -1
-        setSelectedIndex((selectedIndex - 1 + activePhotos.length) % activePhotos.length)
-    }
-
-    const goNext = () => {
-        if (selectedIndex === null) return
-        slideDirRef.current = 1
-        setSelectedIndex((selectedIndex + 1) % activePhotos.length)
-    }
 
     const openPhoto = (index: number) => {
         if (selectedIndex !== null) {
@@ -159,6 +329,18 @@ export default function PhotoGalleryModal({
         }
         setSelectedIndex(index)
     }
+
+    const renderSwipeSlide = (photo: BabyPhoto, key: string) => (
+        <div key={key} className="photo-gallery-swipe-slide">
+            <img
+                src={photo.src}
+                alt={photo.alt ?? 'Gallery photo'}
+                className="photo-gallery-expanded-img"
+                draggable={false}
+                onClick={(e) => e.stopPropagation()}
+            />
+        </div>
+    )
 
     const tabBar = (
         <div className="photo-gallery-tabs">
@@ -192,6 +374,13 @@ export default function PhotoGalleryModal({
             })}
         </div>
     )
+
+    const prevPhoto = selectedIndex !== null
+        ? activePhotos[wrapIndex(selectedIndex - 1, activePhotos.length)]
+        : null
+    const nextPhoto = selectedIndex !== null
+        ? activePhotos[wrapIndex(selectedIndex + 1, activePhotos.length)]
+        : null
 
     return (
         <div
@@ -262,7 +451,7 @@ export default function PhotoGalleryModal({
                             </button>
                         </div>
 
-                        {activePhotos.length > 1 && (
+                        {hasMultiplePhotos && (
                             <button
                                 type="button"
                                 className="photo-gallery-expanded-nav photo-gallery-expanded-nav--prev"
@@ -275,22 +464,41 @@ export default function PhotoGalleryModal({
 
                         <div
                             className="photo-gallery-expanded-stage"
-                            onClick={() => setSelectedIndex(null)}
+                            onClick={handleStageClick}
                             role="presentation"
                         >
-                            <img
-                                src={selectedPhoto.src}
-                                alt={selectedPhoto.alt ?? `Gallery photo ${selectedIndex + 1}`}
-                                className="photo-gallery-expanded-img"
-                                draggable={false}
-                                onClick={(e) => e.stopPropagation()}
-                            />
+                            {hasMultiplePhotos && prevPhoto && nextPhoto ? (
+                                <div ref={viewportRef} className="photo-gallery-swipe-viewport">
+                                    <div ref={trackRef} className="photo-gallery-swipe-track">
+                                        {renderSwipeSlide(prevPhoto, `prev-${prevPhoto.src}`)}
+                                        {renderSwipeSlide(selectedPhoto, `current-${selectedPhoto.src}`)}
+                                        {renderSwipeSlide(nextPhoto, `next-${nextPhoto.src}`)}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="photo-gallery-single-view">
+                                    <img
+                                        src={selectedPhoto.src}
+                                        alt={selectedPhoto.alt ?? `Gallery photo ${selectedIndex + 1}`}
+                                        className="photo-gallery-expanded-img"
+                                        draggable={false}
+                                        onClick={(e) => e.stopPropagation()}
+                                    />
+                                </div>
+                            )}
+
                             {selectedPhoto.alt && (
                                 <p className="photo-gallery-expanded-caption">{selectedPhoto.alt}</p>
                             )}
+
+                            {hasMultiplePhotos && showSwipeHint && (
+                                <p className="photo-gallery-swipe-hint" aria-live="polite">
+                                    Swipe left or right to check other pictures
+                                </p>
+                            )}
                         </div>
 
-                        {activePhotos.length > 1 && (
+                        {hasMultiplePhotos && (
                             <button
                                 type="button"
                                 className="photo-gallery-expanded-nav photo-gallery-expanded-nav--next"
