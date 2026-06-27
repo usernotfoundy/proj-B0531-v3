@@ -1,12 +1,15 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import gsap from 'gsap'
 import type { PhotoGalleryData } from '../types/planet.types'
+
 interface PhotoGalleryModalProps {
     isOpen: boolean
     onClose: () => void
     planetName: string
     photoGallery: PhotoGalleryData
 }
+
+const TAB_COLORS = ['#89C2D9', '#E8A0BF']
 
 const closeBtnStyle: CSSProperties = {
     background: 'rgba(167,216,245,0.08)',
@@ -31,15 +34,29 @@ export default function PhotoGalleryModal({
     planetName,
     photoGallery,
 }: PhotoGalleryModalProps) {
+    const [activeTabIndex, setActiveTabIndex] = useState(0)
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
-    const isExpanded = selectedIndex !== null
-    const selectedPhoto = selectedIndex !== null ? photoGallery.photos[selectedIndex] : null
     const expandedRef = useRef<HTMLDivElement>(null)
     const wasExpandedRef = useRef(false)
     const slideDirRef = useRef(0)
 
+    const activeTab = photoGallery.tabs[activeTabIndex] ?? photoGallery.tabs[0]
+    const activePhotos = activeTab?.photos ?? []
+    const isExpanded = selectedIndex !== null
+    const selectedPhoto = selectedIndex !== null ? activePhotos[selectedIndex] : null
+
+    const selectTab = useCallback((index: number) => {
+        setActiveTabIndex(index)
+        setSelectedIndex(null)
+        wasExpandedRef.current = false
+    }, [])
+
     useEffect(() => {
-        if (!isOpen) setSelectedIndex(null)
+        if (!isOpen) {
+            setActiveTabIndex(0)
+            setSelectedIndex(null)
+            wasExpandedRef.current = false
+        }
     }, [isOpen])
 
     useLayoutEffect(() => {
@@ -88,7 +105,7 @@ export default function PhotoGalleryModal({
                 gsap.fromTo(caption, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.28, ease: 'power2.out' })
             }
         }
-    }, [selectedIndex])
+    }, [selectedIndex, activeTabIndex])
 
     useEffect(() => {
         if (!isOpen) return
@@ -107,31 +124,31 @@ export default function PhotoGalleryModal({
 
             if (e.key === 'ArrowRight') {
                 slideDirRef.current = 1
-                setSelectedIndex((i) => (i === null ? 0 : (i + 1) % photoGallery.photos.length))
+                setSelectedIndex((i) => (i === null ? 0 : (i + 1) % activePhotos.length))
             } else if (e.key === 'ArrowLeft') {
                 slideDirRef.current = -1
                 setSelectedIndex((i) =>
-                    i === null ? 0 : (i - 1 + photoGallery.photos.length) % photoGallery.photos.length,
+                    i === null ? 0 : (i - 1 + activePhotos.length) % activePhotos.length,
                 )
             }
         }
 
         document.addEventListener('keydown', onKeyDown)
         return () => document.removeEventListener('keydown', onKeyDown)
-    }, [isOpen, onClose, selectedIndex, photoGallery.photos.length])
+    }, [isOpen, onClose, selectedIndex, activePhotos.length])
 
-    if (!isOpen) return null
+    if (!isOpen || !activeTab) return null
 
     const goPrev = () => {
         if (selectedIndex === null) return
         slideDirRef.current = -1
-        setSelectedIndex((selectedIndex - 1 + photoGallery.photos.length) % photoGallery.photos.length)
+        setSelectedIndex((selectedIndex - 1 + activePhotos.length) % activePhotos.length)
     }
 
     const goNext = () => {
         if (selectedIndex === null) return
         slideDirRef.current = 1
-        setSelectedIndex((selectedIndex + 1) % photoGallery.photos.length)
+        setSelectedIndex((selectedIndex + 1) % activePhotos.length)
     }
 
     const openPhoto = (index: number) => {
@@ -142,6 +159,39 @@ export default function PhotoGalleryModal({
         }
         setSelectedIndex(index)
     }
+
+    const tabBar = (
+        <div className="photo-gallery-tabs">
+            {photoGallery.tabs.map((tab, index) => {
+                const color = TAB_COLORS[index % TAB_COLORS.length]
+                const isActive = index === activeTabIndex
+                return (
+                    <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => selectTab(index)}
+                        className="photo-gallery-tab"
+                        style={{
+                            color: isActive ? '#F4FAFF' : 'rgba(205,239,253,0.65)',
+                            background: isActive ? `${color}33` : 'rgba(167,216,245,0.05)',
+                            borderColor: isActive ? color : 'rgba(167,216,245,0.2)',
+                            boxShadow: isActive ? `0 0 12px ${color}44` : 'none',
+                        }}
+                    >
+                        <span
+                            className="photo-gallery-tab-dot"
+                            style={{
+                                background: color,
+                                boxShadow: isActive ? `0 0 6px ${color}` : 'none',
+                            }}
+                        />
+                        {tab.label}
+                        <span className="photo-gallery-tab-count">{tab.photos.length}</span>
+                    </button>
+                )
+            })}
+        </div>
+    )
 
     return (
         <div
@@ -190,10 +240,10 @@ export default function PhotoGalleryModal({
                                 onClick={() => setSelectedIndex(null)}
                                 className="photo-gallery-expanded-back"
                             >
-                                ← Back to gallery
+                                ← Back to {activeTab.label}
                             </button>
                             <span className="photo-gallery-expanded-count">
-                                {selectedIndex + 1} / {photoGallery.photos.length}
+                                {activeTab.label} · {selectedIndex + 1} / {activePhotos.length}
                             </span>
                             <button
                                 onClick={onClose}
@@ -212,7 +262,7 @@ export default function PhotoGalleryModal({
                             </button>
                         </div>
 
-                        {photoGallery.photos.length > 1 && (
+                        {activePhotos.length > 1 && (
                             <button
                                 type="button"
                                 className="photo-gallery-expanded-nav photo-gallery-expanded-nav--prev"
@@ -240,7 +290,7 @@ export default function PhotoGalleryModal({
                             )}
                         </div>
 
-                        {photoGallery.photos.length > 1 && (
+                        {activePhotos.length > 1 && (
                             <button
                                 type="button"
                                 className="photo-gallery-expanded-nav photo-gallery-expanded-nav--next"
@@ -318,16 +368,21 @@ export default function PhotoGalleryModal({
                             </button>
                         </div>
 
-                        <div style={{
-                            flex: 1,
-                            overflowY: 'auto',
-                            padding: '1.25rem',
-                            minHeight: 0,
-                        }}>
+                        {tabBar}
+
+                        <div
+                            key={activeTab.id}
+                            style={{
+                                flex: 1,
+                                overflowY: 'auto',
+                                padding: '1.25rem',
+                                minHeight: 0,
+                            }}
+                        >
                             <div className="photo-gallery-mosaic">
-                                {photoGallery.photos.map((photo, i) => (
+                                {activePhotos.map((photo, i) => (
                                     <button
-                                        key={`${photo.src}-${i}`}
+                                        key={`${activeTab.id}-${photo.src}-${i}`}
                                         type="button"
                                         className="photo-gallery-cell"
                                         aria-label={photo.alt ?? `View photo ${i + 1}`}
@@ -365,7 +420,7 @@ export default function PhotoGalleryModal({
                                 color: 'rgba(137,194,217,0.4)',
                                 textTransform: 'uppercase',
                             }}>
-                                Solar Explorer · Memory Archive
+                                Solar Explorer · {activeTab.label} Archive
                             </span>
                             <span style={{
                                 fontFamily: "'Syne', sans-serif",
@@ -373,7 +428,7 @@ export default function PhotoGalleryModal({
                                 color: 'rgba(205,239,253,0.6)',
                                 letterSpacing: '0.05em',
                             }}>
-                                {photoGallery.photos.length} photos
+                                {activePhotos.length} photos
                             </span>
                         </div>
                     </>

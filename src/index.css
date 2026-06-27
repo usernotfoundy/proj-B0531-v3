@@ -216,6 +216,47 @@ canvas {
 }
 
 /* Photo gallery — mosaic grid (modal shell matches other modals) */
+.photo-gallery-tabs {
+  padding: 0.65rem 1.25rem;
+  border-bottom: 1px solid rgba(167, 216, 245, 0.1);
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  background: rgba(167, 216, 245, 0.03);
+  flex-shrink: 0;
+}
+
+.photo-gallery-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.75rem;
+  font-family: var(--font-display);
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 1px solid rgba(167, 216, 245, 0.2);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.photo-gallery-tab-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.photo-gallery-tab-count {
+  font-family: var(--font-body);
+  font-size: 0.55rem;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+
 .photo-gallery-mosaic {
   display: grid;
   grid-template-columns: repeat(6, 1fr);

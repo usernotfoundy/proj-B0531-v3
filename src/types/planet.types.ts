@@ -34,11 +34,17 @@ export interface BabyPhoto {
     rowSpan: number
 }
 
+export interface PhotoGalleryTab {
+    id: string
+    label: string
+    photos: BabyPhoto[]
+}
+
 export interface PhotoGalleryData {
     eyebrow?: string
     title: string
     subtitle: string
-    photos: BabyPhoto[]
+    tabs: PhotoGalleryTab[]
 }
 
 export interface InvitationData {

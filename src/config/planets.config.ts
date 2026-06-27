@@ -1,5 +1,5 @@
 import type { PlanetConfig } from '../types/planet.types'
-import { BABY_PHOTO_GALLERY } from './babyPhotos.config'
+import { BABY_PHOTO_GALLERY, totalArchivePhotos } from './babyPhotos.config'
 import { GODPARENTS } from './godparents.config'
 import { HEALTH_PROTOCOLS } from './healthProtocols.config'
 import { INVITATION } from './invitation.config'
@@ -95,7 +95,7 @@ export const PLANETS: PlanetConfig[] = [
         rotationSpeed: 0.0015,
         description: BABY_PHOTO_GALLERY.subtitle,
         facts: [
-            { label: 'Memories', value: String(BABY_PHOTO_GALLERY.photos.length), unit: 'PHOTOS' },
+            { label: 'Memories', value: String(totalArchivePhotos(BABY_PHOTO_GALLERY)), unit: 'PHOTOS' },
             { label: 'Milestone', value: '1st', unit: 'BIRTHDAY' },
             { label: 'Orbit', value: '365', unit: 'DAYS' },
             { label: 'Theme', value: 'Baby', unit: 'SHOWCASE' },
