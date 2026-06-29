@@ -26,8 +26,8 @@ export const PLANETS: PlanetConfig[] = [
         rotationSpeed: 0.0015,
         description: 'Launch Parameters',
         facts: [
-            { label: 'Stardate', value: 'August 1st, 2026', unit: 'Saturday' },
-            { label: 'T-Minus Zero', value: '11:00 AM', unit: 'AST (Arrival Standard Time)' },
+            { label: 'Stardate', value: 'August 29th, 2026', unit: 'Saturday' },
+            { label: 'T-Minus Zero', value: '12:30 PM', unit: 'AST (Arrival Standard Time)' },
             // { label: 'Day Length', value: '24.6', unit: 'hours' },
             // { label: 'Moons', value: '2' },
             // { label: 'Surface Temp', value: '-60', unit: '°C avg' },
