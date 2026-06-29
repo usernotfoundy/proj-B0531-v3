@@ -8,7 +8,7 @@ import type { PlanetRegistry } from './PlanetRegistry'
 
 gsap.registerPlugin(ScrollTrigger)
 
-const CAMERA_DISTANCE = 18
+const CAMERA_DISTANCE = 16
 const CAMERA_ELEVATION = 4
 
 export class CameraPath {
@@ -74,10 +74,11 @@ export class CameraPath {
             lookZ: waypoints[0].lookZ,
         }
 
-        // Build the full path first — ScrollTrigger must measure a complete timeline
+        // Continuous fly-through: one segment per planet. The first segment holds at
+        // Earth; each later segment smoothly travels to the next world as you scroll.
         this.tl = gsap.timeline()
 
-        waypoints.slice(1).forEach((wp) => {
+        waypoints.forEach((wp) => {
             this.tl!.to(proxy, {
                 camX: wp.camX,
                 camY: wp.camY,

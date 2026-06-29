@@ -42,9 +42,10 @@ export default function PlanetPanel({ onShowCoordinates, onShowGodparents, onSho
     const { activePlanetIndex, planetProgress } = useHUD()
     // const planet = PLANETS[activePlanetIndex]
 
-    // Panel is visible when you're in the middle of a planet's scroll section
-    // Fades in after 8% progress, fades out after 80%
-    const isVisible = planetProgress > 0.08 && planetProgress < 0.82
+    // Earth holds in place; other worlds show the panel as you fly into them
+    const isVisible = activePlanetIndex === 0
+        ? planetProgress > 0.08 && planetProgress < 0.82
+        : planetProgress > 0.5 && planetProgress < 0.88
 
     const [renderedIndex, setRenderedIndex] = useState(activePlanetIndex)
     const [animState, setAnimState] = useState<'in' | 'out' | 'idle'>('idle')

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { PLANETS } from '../config/planets.config'
+import { scrollToPlanet } from '../config/scroll.config'
 import { useHUD } from '../hooks/useHUD'
 
 export default function HUD() {
@@ -63,8 +64,9 @@ export default function HUD() {
                     transform: 'translateY(-50%)',
                     display: 'flex',
                     flexDirection: 'column',
-                    alignItems: 'center',
+                    alignItems: 'flex-end',
                     gap: '0',
+                    pointerEvents: 'auto',
                 }}
             >
                 {/* Top cap */}
@@ -78,16 +80,15 @@ export default function HUD() {
                 <div style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    alignItems: 'center',
+                    alignItems: 'flex-end',
                     gap: '0',
                     position: 'relative',
                 }}>
-                    {/* Track line */}
+                    {/* Track line — runs through dot centers on the right */}
                     <div style={{
                         position: 'absolute',
                         top: 0,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
+                        right: '4px',
                         width: '1px',
                         height: '100%',
                         background: 'rgba(167, 216, 245, 0.1)',
@@ -97,8 +98,7 @@ export default function HUD() {
                     <div style={{
                         position: 'absolute',
                         top: 0,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
+                        right: '4px',
                         width: '1px',
                         height: `${scrollProgress * 100}%`,
                         background: 'rgba(137, 194, 217, 0.6)',
@@ -110,52 +110,80 @@ export default function HUD() {
                         const isPassed = index < activePlanetIndex
 
                         return (
-                            <div
+                            <button
                                 key={planet.id}
+                                type="button"
+                                aria-label={`Go to ${planet.name}`}
+                                aria-current={isActive ? 'true' : undefined}
+                                onClick={() => scrollToPlanet(index)}
+                                onMouseEnter={(e) => {
+                                    if (isActive) return
+                                    const label = e.currentTarget.querySelector('[data-planet-label]') as HTMLElement | null
+                                    if (label) label.style.color = 'rgba(205, 239, 253, 0.75)'
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (isActive) return
+                                    const label = e.currentTarget.querySelector('[data-planet-label]') as HTMLElement | null
+                                    if (label) label.style.color = 'rgba(137, 194, 217, 0.3)'
+                                }}
                                 style={{
                                     display: 'flex',
-                                    flexDirection: 'column',
+                                    flexDirection: 'row',
                                     alignItems: 'center',
-                                    position: 'relative',
+                                    justifyContent: 'flex-end',
+                                    gap: '0.65rem',
                                     padding: '0.75rem 0',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    fontFamily: 'inherit',
                                 }}
                             >
-                                {/* Dot */}
+                                {/* Planet name label */}
+                                <span
+                                    data-planet-label
+                                    style={{
+                                        fontSize: '0.5rem',
+                                        letterSpacing: '0.2em',
+                                        textTransform: 'uppercase',
+                                        color: isActive
+                                            ? '#CDEFFD'
+                                            : 'rgba(137, 194, 217, 0.3)',
+                                        whiteSpace: 'nowrap',
+                                        transition: 'color 0.3s ease',
+                                        textAlign: 'right',
+                                    }}
+                                >
+                                    {planet.name}
+                                </span>
+
+                                {/* Dot — right of label, centered on the track */}
                                 <div style={{
-                                    width: isActive ? '8px' : '4px',
-                                    height: isActive ? '8px' : '4px',
-                                    borderRadius: '50%',
-                                    background: isActive
-                                        ? '#A7D8F5'
-                                        : isPassed
-                                            ? 'rgba(137, 194, 217, 0.6)'
-                                            : 'rgba(167, 216, 245, 0.15)',
-                                    boxShadow: isActive
-                                        ? '0 0 8px rgba(167, 216, 245, 0.7)'
-                                        : 'none',
-                                    transition: 'all 0.4s ease',
+                                    width: '8px',
+                                    height: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0,
                                     position: 'relative',
                                     zIndex: 1,
-                                }} />
-
-                                {/* Planet name label */}
-                                <div style={{
-                                    position: 'absolute',
-                                    right: '1.2rem',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    fontSize: '0.5rem',
-                                    letterSpacing: '0.2em',
-                                    textTransform: 'uppercase',
-                                    color: isActive
-                                        ? '#CDEFFD'
-                                        : 'rgba(137, 194, 217, 0.3)',
-                                    whiteSpace: 'nowrap',
-                                    transition: 'color 0.4s ease',
                                 }}>
-                                    {planet.name}
+                                    <div style={{
+                                        width: isActive ? '8px' : '4px',
+                                        height: isActive ? '8px' : '4px',
+                                        borderRadius: '50%',
+                                        background: isActive
+                                            ? '#A7D8F5'
+                                            : isPassed
+                                                ? 'rgba(137, 194, 217, 0.6)'
+                                                : 'rgba(167, 216, 245, 0.15)',
+                                        boxShadow: isActive
+                                            ? '0 0 8px rgba(167, 216, 245, 0.7)'
+                                            : 'none',
+                                        transition: 'all 0.4s ease',
+                                    }} />
                                 </div>
-                            </div>
+                            </button>
                         )
                     })}
                 </div>
