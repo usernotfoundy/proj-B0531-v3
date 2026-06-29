@@ -4,7 +4,7 @@ import SplashScreen from './components/SplashScreen'
 import ScrollContainer from './components/ScrollContainer'
 import { useSpaceScene } from './hooks/useSpaceScene'
 import { PLANETS } from './config/planets.config'
-import type { GodparentsData, HealthProtocolsData, InvitationData, LocationCoordinate, PhotoGalleryData } from './types/planet.types'
+import type { GodparentsData, HealthProtocolsData, InvitationData, LaunchProgrammeData, LocationCoordinate, PhotoGalleryData } from './types/planet.types'
 
 const HUD = lazy(() => import('./components/HUD'))
 const PlanetPanel = lazy(() => import('./components/PlanetPanel'))
@@ -13,6 +13,7 @@ const GodparentsModal = lazy(() => import('./components/GodparentsModal'))
 const HealthProtocolsModal = lazy(() => import('./components/HealthProtocolsModal'))
 const PhotoGalleryModal = lazy(() => import('./components/PhotoGalleryModal'))
 const InvitationModal = lazy(() => import('./components/InvitationModal'))
+const LaunchProgrammeModal = lazy(() => import('./components/LaunchProgrammeModal'))
 
 interface CoordinatesData {
   planetName: string
@@ -41,6 +42,11 @@ interface InvitationModalData {
   invitation: InvitationData
 }
 
+interface LaunchProgrammeModalData {
+  planetName: string
+  launchProgramme: LaunchProgrammeData
+}
+
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { spaceshipRef } = useSpaceScene(canvasRef)
@@ -50,6 +56,7 @@ export default function App() {
   const [healthProtocolsModal, setHealthProtocolsModal] = useState<HealthProtocolsModalData | null>(null)
   const [photoGalleryModal, setPhotoGalleryModal] = useState<PhotoGalleryModalData | null>(null)
   const [invitationModal, setInvitationModal] = useState<InvitationModalData | null>(null)
+  const [launchProgrammeModal, setLaunchProgrammeModal] = useState<LaunchProgrammeModalData | null>(null)
 
   return (
     <>
@@ -75,6 +82,7 @@ export default function App() {
             onShowHealthProtocols={setHealthProtocolsModal}
             onShowPhotoGallery={setPhotoGalleryModal}
             onShowInvitation={setInvitationModal}
+            onShowLaunchProgramme={setLaunchProgrammeModal}
           />
         </Suspense>
       )}
@@ -128,6 +136,16 @@ export default function App() {
             onClose={() => setInvitationModal(null)}
             planetName={invitationModal.planetName}
             invitation={invitationModal.invitation}
+          />
+        </Suspense>
+      )}
+      {launchProgrammeModal && (
+        <Suspense fallback={null}>
+          <LaunchProgrammeModal
+            isOpen={!!launchProgrammeModal}
+            onClose={() => setLaunchProgrammeModal(null)}
+            planetName={launchProgrammeModal.planetName}
+            launchProgramme={launchProgrammeModal.launchProgramme}
           />
         </Suspense>
       )}

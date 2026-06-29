@@ -52,6 +52,24 @@ export interface InvitationData {
     subtitle: string
 }
 
+export interface EntranceGroup {
+    id: string
+    label: string
+    names: string[]
+}
+
+export interface ProgrammeItem {
+    title: string
+    entranceGroups?: EntranceGroup[]
+}
+
+export interface LaunchProgrammeData {
+    reminders: string
+    christeningTime: string
+    title: string
+    items: ProgrammeItem[]
+}
+
 export interface PlanetButton {
     label: string
     action?: string
@@ -83,6 +101,7 @@ export interface PlanetConfig {
     healthProtocols?: HealthProtocolsData
     photoGallery?: PhotoGalleryData
     invitation?: InvitationData
+    launchProgramme?: LaunchProgrammeData
 }
 
 export interface CameraWaypoint {

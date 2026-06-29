@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { PLANETS } from '../config/planets.config'
 import { useHUD } from '../hooks/useHUD'
-import type { GodparentsData, HealthProtocolsData, InvitationData, LocationCoordinate, PhotoGalleryData } from '../types/planet.types'
+import type { GodparentsData, HealthProtocolsData, InvitationData, LaunchProgrammeData, LocationCoordinate, PhotoGalleryData } from '../types/planet.types'
 
 interface CoordinatesData {
   planetName: string
@@ -30,15 +30,21 @@ interface InvitationModalData {
   invitation: InvitationData
 }
 
+interface LaunchProgrammeModalData {
+  planetName: string
+  launchProgramme: LaunchProgrammeData
+}
+
 interface PlanetPanelProps {
   onShowCoordinates?: (data: CoordinatesData) => void
   onShowGodparents?: (data: GodparentsModalData) => void
   onShowHealthProtocols?: (data: HealthProtocolsModalData) => void
   onShowPhotoGallery?: (data: PhotoGalleryModalData) => void
   onShowInvitation?: (data: InvitationModalData) => void
+  onShowLaunchProgramme?: (data: LaunchProgrammeModalData) => void
 }
 
-export default function PlanetPanel({ onShowCoordinates, onShowGodparents, onShowHealthProtocols, onShowPhotoGallery, onShowInvitation }: PlanetPanelProps) {
+export default function PlanetPanel({ onShowCoordinates, onShowGodparents, onShowHealthProtocols, onShowPhotoGallery, onShowInvitation, onShowLaunchProgramme }: PlanetPanelProps) {
     const { activePlanetIndex, planetProgress } = useHUD()
     // const planet = PLANETS[activePlanetIndex]
 
@@ -195,8 +201,35 @@ export default function PlanetPanel({ onShowCoordinates, onShowGodparents, onSho
                         </p>
                     )}
 
+                    {/* ── Christening callout (Launch Details) ─────────────── */}
+                    {planet.launchProgramme && (
+                        <div style={{
+                            padding: '0.85rem 1rem',
+                            marginBottom: '0.25rem',
+                            border: '1px solid rgba(167,216,245,0.2)',
+                            borderLeft: '3px solid #A7D8F5',
+                            background: 'rgba(167,216,245,0.06)',
+                            animation: 'statReveal 0.4s ease forwards',
+                            animationDelay: '0.1s',
+                            opacity: 0,
+                        }}>
+                            <div style={{
+                                fontFamily: "'Orbitron', sans-serif",
+                                fontSize: '0.75rem',
+                                fontWeight: 900,
+                                letterSpacing: '0.12em',
+                                color: '#F4FAFF',
+                                textTransform: 'uppercase',
+                                textShadow: '0 0 20px rgba(167,216,245,0.25)',
+                                lineHeight: 1.4,
+                            }}>
+                                CHRISTENING IS {planet.launchProgramme.christeningTime}
+                            </div>
+                        </div>
+                    )}
+
                     {/* ── Facts grid ──────────────────────────────────────── */}
-                    {panelFacts && (
+                    {panelFacts && !planet.launchProgramme && (
                         <div style={{
                             display: 'grid',
                             gridTemplateColumns: '1fr 1fr',
@@ -278,6 +311,11 @@ export default function PlanetPanel({ onShowCoordinates, onShowGodparents, onSho
                                     onShowInvitation({
                                         planetName: planet.name,
                                         invitation: planet.invitation,
+                                    })
+                                } else if (planet.launchProgramme && onShowLaunchProgramme) {
+                                    onShowLaunchProgramme({
+                                        planetName: planet.name,
+                                        launchProgramme: planet.launchProgramme,
                                     })
                                 }
                             }}

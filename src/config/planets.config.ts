@@ -3,6 +3,7 @@ import { BABY_PHOTO_GALLERY, totalArchivePhotos } from './babyPhotos.config'
 import { GODPARENTS } from './godparents.config'
 import { HEALTH_PROTOCOLS } from './healthProtocols.config'
 import { INVITATION } from './invitation.config'
+import { LAUNCH_PROGRAMME } from './launchProgramme.config'
 
 export const PLANETS: PlanetConfig[] = [
     {
@@ -58,16 +59,9 @@ export const PLANETS: PlanetConfig[] = [
         position: [-25, 12, -260],
         displaySize: 10,
         rotationSpeed: 0.003,
-        description: 'Below are the scheduled events for the launch day. Stay tuned for updates as we approach the launch date.',
-        facts: [
-            { label: 'Christening', value: '10:00', unit: 'AM' },
-            { label: 'Eating', value: '12:00', unit: 'NOON' },
-            // { label: 'Day Length', value: '9.9', unit: 'hours' },
-            // { label: 'Moons', value: '95' },
-            // { label: 'Surface Temp', value: '-110', unit: '°C avg' },
-            // { label: 'Gravity', value: '24.8', unit: 'm/s²' },
-        ],
-        // button: { label: 'EXPLORE' },
+        description: LAUNCH_PROGRAMME.reminders,
+        launchProgramme: LAUNCH_PROGRAMME,
+        button: { label: 'VIEW PROGRAMME' },
     },
     {
         id: 'saturn',
