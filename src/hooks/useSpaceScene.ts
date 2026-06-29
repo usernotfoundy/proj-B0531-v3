@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { SceneManager } from '../scene/SceneManager'
 import { PlanetRegistry } from '../scene/PlanetRegistry'
 import { CameraPath } from '../scene/CameraPath'
@@ -20,16 +21,27 @@ export function useSpaceScene(canvasRef: React.RefObject<HTMLCanvasElement | nul
         const sceneManager = new SceneManager(canvas)
         const sun = new Sun(sceneManager)
         const registry = new PlanetRegistry(sceneManager)
-        const cameraPath = new CameraPath(sceneManager, registry)
         const spaceship = new Spaceship(sceneManager)
 
         sceneManagerRef.current = sceneManager
         sunRef.current = sun
         registryRef.current = registry
-        cameraPathRef.current = cameraPath
         spaceshipRef.current = spaceship
 
         sceneManager.start()
+
+        let cameraPath: CameraPath | null = null
+        let cancelled = false
+        let innerFrame = 0
+
+        const outerFrame = requestAnimationFrame(() => {
+            innerFrame = requestAnimationFrame(() => {
+                if (cancelled) return
+                cameraPath = new CameraPath(sceneManager, registry)
+                cameraPathRef.current = cameraPath
+                ScrollTrigger.refresh()
+            })
+        })
 
         const handleScroll = () => {
             const scrolled = window.scrollY
@@ -48,15 +60,23 @@ export function useSpaceScene(canvasRef: React.RefObject<HTMLCanvasElement | nul
 
         window.addEventListener('scroll', handleScroll, { passive: true })
 
+        const refreshScroll = () => ScrollTrigger.refresh()
+        window.addEventListener('resize', refreshScroll)
+        requestAnimationFrame(() => requestAnimationFrame(refreshScroll))
+
         return () => {
+            cancelled = true
+            cancelAnimationFrame(outerFrame)
+            cancelAnimationFrame(innerFrame)
             window.removeEventListener('scroll', handleScroll)
-            cameraPath.destroy()
+            window.removeEventListener('resize', refreshScroll)
+            cameraPath?.destroy()
             registry.dispose()
             sun.dispose()
             spaceship.dispose()
             sceneManager.destroy()
         }
-    }, [])
+    }, [PLANETS.length])
 
     return { sceneManagerRef, registryRef, cameraPathRef, sunRef, spaceshipRef }
 }

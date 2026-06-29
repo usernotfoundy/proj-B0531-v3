@@ -114,4 +114,19 @@ export const PLANETS: PlanetConfig[] = [
         invitation: INVITATION,
         button: { label: 'RSVP' },
     },
+    {
+        id: 'pluto',
+        name: 'PLUTO',
+        modelPath: '/models/pluto.glb',
+        position: [30, -5, -900],
+        displaySize: 22,
+        rotationSpeed: 0.001,
+        description: 'The outermost checkpoint on this mission. Thank you for joining us on this journey.',
+        facts: [
+            { label: 'Status', value: 'Complete', unit: 'MISSION' },
+            { label: 'Checkpoint', value: 'Final', unit: 'WAYPOINT' },
+            { label: 'Orbit', value: '248', unit: 'YEARS' },
+            { label: 'Moons', value: '5', unit: 'KNOWN' },
+        ],
+    },
 ]

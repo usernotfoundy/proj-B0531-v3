@@ -1,9 +1,6 @@
-import { PLANETS } from '../config/planets.config'
+import { TOTAL_SCROLL_VH, SCROLL_CONTAINER_ID } from '../config/scroll.config'
 
-// How many viewport heights each planet section takes
-const VH_PER_PLANET = 150
-
-export const TOTAL_SCROLL_VH = VH_PER_PLANET * PLANETS.length
+export { TOTAL_SCROLL_VH, SCROLL_CONTAINER_ID }
 
 export default function ScrollContainer({
     children,
@@ -12,6 +9,7 @@ export default function ScrollContainer({
 }) {
     return (
         <div
+            id={SCROLL_CONTAINER_ID}
             style={{ height: `${TOTAL_SCROLL_VH}vh` }}
             className="relative w-full"
         >

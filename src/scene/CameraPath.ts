@@ -1,6 +1,8 @@
 import * as THREE from 'three'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { PLANETS } from '../config/planets.config'
+import { getMaxScrollPx, SCROLL_CONTAINER_ID } from '../config/scroll.config'
 import type { SceneManager } from './SceneManager'
 import type { PlanetRegistry } from './PlanetRegistry'
 
@@ -14,6 +16,7 @@ export class CameraPath {
     private currentLookAt: THREE.Vector3
     private targetLookAt: THREE.Vector3
     private tl: gsap.core.Timeline | null = null
+    private scrollTrigger: ScrollTrigger | null = null
 
     constructor(sceneManager: SceneManager, registry: PlanetRegistry) {
         this.sceneManager = sceneManager
@@ -32,21 +35,23 @@ export class CameraPath {
             return
         }
 
+        if (planets.length !== PLANETS.length) {
+            console.warn(
+                `[CameraPath] Registry has ${planets.length} planets but config has ${PLANETS.length}`
+            )
+        }
+
         const camera = this.sceneManager.camera
 
-        // ── Derive one waypoint per planet ───────────────────────────
         const waypoints = planets.map((planet) => ({
-            // Camera sits in front of and slightly above each planet
             camX: planet.position.x - CAMERA_DISTANCE * 0.4,
             camY: planet.position.y + CAMERA_ELEVATION,
             camZ: planet.position.z + CAMERA_DISTANCE,
-            // LookAt is the planet center
             lookX: planet.position.x,
             lookY: planet.position.y,
             lookZ: planet.position.z,
         }))
 
-        // ── Set camera at the very first waypoint immediately ────────
         camera.position.set(
             waypoints[0].camX,
             waypoints[0].camY,
@@ -60,7 +65,6 @@ export class CameraPath {
         this.targetLookAt.copy(this.currentLookAt)
         camera.lookAt(this.currentLookAt)
 
-        // ── Proxy object — GSAP tweens this, we read it each frame ───
         const proxy = {
             camX: waypoints[0].camX,
             camY: waypoints[0].camY,
@@ -70,18 +74,10 @@ export class CameraPath {
             lookZ: waypoints[0].lookZ,
         }
 
-        // ── Single master timeline scrubbed by scroll ────────────────
-        this.tl = gsap.timeline({
-            scrollTrigger: {
-                trigger: 'body',
-                start: 'top top',
-                end: 'bottom bottom',
-                scrub: 1.5,            // floaty space feel — increase for more lag
-            },
-        })
+        // Build the full path first — ScrollTrigger must measure a complete timeline
+        this.tl = gsap.timeline()
 
-        // Add one tween per planet — GSAP sequences them equally
-        waypoints.forEach((wp) => {
+        waypoints.slice(1).forEach((wp) => {
             this.tl!.to(proxy, {
                 camX: wp.camX,
                 camY: wp.camY,
@@ -89,17 +85,28 @@ export class CameraPath {
                 lookX: wp.lookX,
                 lookY: wp.lookY,
                 lookZ: wp.lookZ,
-                // ease: 'power2.inOut',
-                duration: 1,           // relative duration — all equal weight
+                duration: 1,
                 onUpdate: () => {
                     camera.position.set(proxy.camX, proxy.camY, proxy.camZ)
                     this.targetLookAt.set(proxy.lookX, proxy.lookY, proxy.lookZ)
                 },
             })
         })
+
+        const scrollEl = document.getElementById(SCROLL_CONTAINER_ID) ?? document.body
+
+        this.scrollTrigger = ScrollTrigger.create({
+            animation: this.tl,
+            trigger: scrollEl,
+            start: 'top top',
+            end: () => `+=${getMaxScrollPx()}`,
+            scrub: 1.5,
+            invalidateOnRefresh: true,
+        })
+
+        requestAnimationFrame(() => ScrollTrigger.refresh())
     }
 
-    // ── Smooth lookAt — lerps every frame toward targetLookAt ─────
     private registerLookAtTick() {
         this.sceneManager.onTick(() => {
             this.currentLookAt.lerp(this.targetLookAt, 0.06)
@@ -108,7 +115,9 @@ export class CameraPath {
     }
 
     destroy() {
+        this.scrollTrigger?.kill()
+        this.scrollTrigger = null
         this.tl?.kill()
-        ScrollTrigger.getAll().forEach((t) => t.kill())
+        this.tl = null
     }
 }

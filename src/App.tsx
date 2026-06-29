@@ -3,6 +3,7 @@ import SpaceCanvas from './components/SpaceCanvas'
 import SplashScreen from './components/SplashScreen'
 import ScrollContainer from './components/ScrollContainer'
 import { useSpaceScene } from './hooks/useSpaceScene'
+import { PLANETS } from './config/planets.config'
 import type { GodparentsData, HealthProtocolsData, InvitationData, LocationCoordinate, PhotoGalleryData } from './types/planet.types'
 
 const HUD = lazy(() => import('./components/HUD'))
@@ -55,7 +56,7 @@ export default function App() {
       <SpaceCanvas canvasRef={canvasRef} />
 
       <div className="relative" style={{ zIndex: 1 }}>
-        <ScrollContainer />
+        <ScrollContainer key={PLANETS.length} />
       </div>
 
       {!splashDone && (
